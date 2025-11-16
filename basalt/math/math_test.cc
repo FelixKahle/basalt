@@ -1,0 +1,60 @@
+// Copyright (c) 2025 Felix Kahle.
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+#include "basalt/math/math.h"
+#include "gtest/gtest.h"
+
+namespace bslt::test
+{
+    TEST(AbsTest, PositiveValueReturnsSame)
+    {
+        EXPECT_EQ(Abs(5), 5);
+        EXPECT_EQ(Abs(3.14), 3.14);
+    }
+
+    TEST(AbsTest, NegativeValueReturnsPositive)
+    {
+        EXPECT_EQ(Abs(-5), 5);
+        EXPECT_EQ(Abs(-3.14), 3.14);
+    }
+
+    TEST(AlmostEqualTest, SameValueReturnsTrue)
+    {
+        EXPECT_TRUE(AlmostEqual(1.0, 1.0));
+        EXPECT_TRUE(AlmostEqual(1, 1));
+        EXPECT_TRUE(AlmostEqual(1, 2, 3));
+        EXPECT_TRUE(AlmostEqual(1.0, 1));
+        EXPECT_TRUE(AlmostEqual(1, 1.0f));
+    }
+
+    TEST(AlmostEqualTest, DifferentValuesWithinEpsilonReturnsTrue)
+    {
+        constexpr double kEpsilon = std::numeric_limits<double>::epsilon();
+
+        EXPECT_TRUE(AlmostEqual(1.0, 1.0 + kEpsilon * 0.5));
+        EXPECT_TRUE(AlmostEqual(1.0, 1.0 - kEpsilon * 0.5));
+    }
+
+    static_assert(IsPowerOfTwo(16), "16 should be a power of two");
+    static_assert(!IsPowerOfTwo(18), "18 should not be a power of two");
+    static_assert(IsPowerOfTwo(1), "1 should be a power of two (2^0)");
+    static_assert(!IsPowerOfTwo(0), "0 should not be a power of two");
+}
