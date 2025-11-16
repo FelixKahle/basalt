@@ -38,11 +38,22 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "math_test",
+    srcs = ["math_test.cc"],
+    deps = [
+        ":math",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "interval",
     hdrs = [
         "interval.h",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         ":math",
         "@abseil-cpp//absl/hash:hash",
@@ -57,16 +68,6 @@ cc_test(
     srcs = ["interval_test.cc"],
     deps = [
         ":interval",
-        "@googletest//:gtest",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "math_test",
-    srcs = ["math_test.cc"],
-    deps = [
-        ":math",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],

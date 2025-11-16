@@ -11,7 +11,7 @@
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY,
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
 // NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
@@ -21,480 +21,398 @@
 
 #include "basalt/math/interval.h"
 #include "gtest/gtest.h"
-#include <limits>
-#include <optional>
+#include "absl/hash/hash.h"
+#include "absl/strings/str_format.h"
 
 namespace bslt::test
 {
-    TEST(ClosedOpenIntervalTest, ConstructorAndGetters)
+    // Static assert to ensure the concept is satisfied.
+    static_assert(Interval<ClosedOpenInterval<int32_t>>, "ClosedOpenInterval<int32_t> should satisfy the Interval concept");
+    static_assert(Interval<ClosedOpenInterval<double>>, "ClosedOpenInterval<double> should satisfy the Interval concept");
+
+    // Typed test suite for basic interval logic across different arithmetic types
+    template <typename T>
+    class IntervalTypedTest : public ::testing::Test {};
+
+    using TestTypes = ::testing::Types<int, float, double, size_t>;
+    TYPED_TEST_SUITE(IntervalTypedTest, TestTypes);
+
+    TYPED_TEST(IntervalTypedTest, ConstructionAndGetters)
     {
-        constexpr ClosedOpenInterval<int> i(10, 20);
-        EXPECT_EQ(i.GetStart(), 10);
-        EXPECT_EQ(i.GetEnd(), 20);
+        using T = TypeParam;
+        const T start{0};
+        const T end{10};
+        const ClosedOpenInterval<T> interval(start, end);
 
-        // Test auto-sorting
-        constexpr ClosedOpenInterval<int> i_reversed(20, 10);
-        EXPECT_EQ(i_reversed.GetStart(), 10);
-        EXPECT_EQ(i_reversed.GetEnd(), 20);
-
-        constexpr ClosedOpenInterval<int> i_empty(10, 10);
-        EXPECT_EQ(i_empty.GetStart(), 10);
-        EXPECT_EQ(i_empty.GetEnd(), 10);
-
-        constexpr ClosedOpenInterval<double> d(10.5, 20.5);
-        EXPECT_EQ(d.GetStart(), 10.5);
-        EXPECT_EQ(d.GetEnd(), 20.5);
+        EXPECT_EQ(interval.GetStart(), start);
+        EXPECT_EQ(interval.GetEnd(), end);
     }
 
-    TEST(ClosedOpenIntervalTest, Midpoint)
+    TYPED_TEST(IntervalTypedTest, ConstructionSwapsOrder)
     {
-        constexpr ClosedOpenInterval<int> i_even(10, 20);
-        EXPECT_EQ(i_even.Midpoint(), 15); // 10 + (20-10)/2 = 15
+        using T = TypeParam;
+        const T start{0};
+        const T end{10};
+        const ClosedOpenInterval<T> interval(end, start); // Swapped
 
-        constexpr ClosedOpenInterval<int> i_odd(10, 21);
-        EXPECT_EQ(i_odd.Midpoint(), 15); // 10 + (21-10)/2 = 10 + 5 = 15
-
-        constexpr ClosedOpenInterval<double> d(10.0, 21.0);
-        EXPECT_EQ(d.Midpoint(), 15.5); // (10.0 + 21.0) / 2 = 15.5
-
-        constexpr ClosedOpenInterval<int> i_neg(-20, -10);
-        EXPECT_EQ(i_neg.Midpoint(), -15); // -20 + (-10 - -20)/2 = -20 + 5 = -15
-
-        // Test template return type
-        EXPECT_EQ(i_even.Midpoint<double>(), 15.0);
-        EXPECT_EQ(d.Midpoint<int>(), 15);
+        EXPECT_EQ(interval.GetStart(), start);
+        EXPECT_EQ(interval.GetEnd(), end);
     }
 
-    TEST(ClosedOpenIntervalTest, IsEmptyAndLength)
+    TYPED_TEST(IntervalTypedTest, IsEmpty)
     {
-        constexpr ClosedOpenInterval<int> i(10, 20);
-        EXPECT_FALSE(i.IsEmpty());
-        EXPECT_EQ(i.Length(), 10);
+        using T = TypeParam;
+        const ClosedOpenInterval<T> empty_interval(T{5}, T{5});
+        const ClosedOpenInterval<T> normal_interval(T{5}, T{10});
 
-        constexpr ClosedOpenInterval<int> i_empty(10, 10);
-        EXPECT_TRUE(i_empty.IsEmpty());
-        EXPECT_EQ(i_empty.Length(), 0);
-
-        constexpr ClosedOpenInterval<double> d(10.5, 11.0);
-        EXPECT_FALSE(d.IsEmpty());
-        EXPECT_DOUBLE_EQ(d.Length(), 0.5);
+        EXPECT_TRUE(empty_interval.IsEmpty());
+        EXPECT_FALSE(normal_interval.IsEmpty());
     }
 
-    TEST(ClosedOpenIntervalTest, Contains)
+    TYPED_TEST(IntervalTypedTest, Length)
     {
-        constexpr ClosedOpenInterval<int> i(10, 20); // [10, 20)
-        EXPECT_FALSE(i.Contains(9));
-        EXPECT_TRUE(i.Contains(10));  // Inclusive start
-        EXPECT_TRUE(i.Contains(15));
-        EXPECT_TRUE(i.Contains(19));
-        EXPECT_FALSE(i.Contains(20)); // Exclusive end
-        EXPECT_FALSE(i.Contains(21));
+        using T = TypeParam;
+        const ClosedOpenInterval<T> interval(T{5}, T{15});
+        const ClosedOpenInterval<T> empty_interval(T{5}, T{5});
 
-        // Test with different types
-        EXPECT_TRUE(i.Contains(10.0));
-        EXPECT_TRUE(i.Contains(19.999));
-        EXPECT_FALSE(i.Contains(20.0));
+        EXPECT_EQ(interval.Length(), T{10});
+        EXPECT_EQ(empty_interval.Length(), T{0});
 
-        constexpr ClosedOpenInterval<int> i_empty(10, 10);
-        EXPECT_FALSE(i_empty.Contains(10));
+        if constexpr (std::is_signed_v<T>)
+        {
+            const ClosedOpenInterval<T> negative_interval(T{-10}, T{0});
+            EXPECT_EQ(negative_interval.Length(), T{10});
+        }
     }
 
-    TEST(ClosedOpenIntervalTest, ContainsInterval)
+    TYPED_TEST(IntervalTypedTest, Midpoint)
     {
-        constexpr ClosedOpenInterval<int> i(10, 20); // [10, 20)
-        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<int>(10, 20))); // Identical
-        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<int>(12, 18))); // Fully inside
-        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<int>(10, 18))); // Aligned start
-        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<int>(12, 20))); // Aligned end
-        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<int>(10, 10))); // Empty at start
-        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<int>(15, 15))); // Empty inside
+        using T = TypeParam;
+        const ClosedOpenInterval<T> interval_even(T{0}, T{10});
+        const ClosedOpenInterval<T> interval_odd(T{0}, T{5});
 
-        EXPECT_FALSE(i.ContainsInterval(ClosedOpenInterval<int>(8, 12)));  // Overlap start
-        EXPECT_FALSE(i.ContainsInterval(ClosedOpenInterval<int>(18, 22))); // Overlap end
-        EXPECT_FALSE(i.ContainsInterval(ClosedOpenInterval<int>(8, 22)));  // Contains this
-        EXPECT_FALSE(i.ContainsInterval(ClosedOpenInterval<int>(0, 5)));   // Disjoint
+        if constexpr (std::is_floating_point_v<T>)
+        {
+            EXPECT_EQ(interval_even.Midpoint(), T{5.0});
+            EXPECT_EQ(interval_odd.Midpoint(), T{2.5});
+            if constexpr (std::is_signed_v<T>)
+            {
+                const ClosedOpenInterval<T> interval_negative(T{-10}, T{0});
+                EXPECT_EQ(interval_negative.Midpoint(), T{-5.0});
+            }
+        }
+        else
+        {
+            // Integer division behavior
+            EXPECT_EQ(interval_even.Midpoint(), T{5});
+            EXPECT_EQ(interval_odd.Midpoint(), T{2}); // 0 + (5-0)/2 = 2
+            if constexpr (std::is_signed_v<T>)
+            {
+                const ClosedOpenInterval<T> interval_negative(T{-10}, T{0});
+                EXPECT_EQ(interval_negative.Midpoint(), T{-5}); // -10 + (0 - (-10))/2 = -5
+            }
+        }
     }
 
-    TEST(ClosedOpenIntervalTest, Intersects)
+    TYPED_TEST(IntervalTypedTest, ContainsValue)
     {
-        constexpr ClosedOpenInterval<int> i(10, 20); // [10, 20)
-        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<int>(10, 20))); // Identical
-        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<int>(12, 18))); // Fully inside
-        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<int>(8, 12)));  // Overlap start
-        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<int>(18, 22))); // Overlap end
-        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<int>(8, 22)));  // Contains this
+        using T = TypeParam;
+        const ClosedOpenInterval<T> interval(T{0}, T{10});
+
+        // Start is inclusive
+        EXPECT_TRUE(interval.Contains(T{0}));
+        // Middle
+        EXPECT_TRUE(interval.Contains(T{5}));
+
+        // End is exclusive
+        EXPECT_FALSE(interval.Contains(T{10}));
+
+        // Values just inside/outside the end
+        if constexpr (std::is_floating_point_v<T>)
+        {
+            EXPECT_TRUE(interval.Contains(T{9.9999}));
+        }
+        else
+        {
+            EXPECT_TRUE(interval.Contains(T{9}));
+        }
+
+        // Outside
+        if constexpr (std::is_signed_v<T>)
+        {
+            EXPECT_FALSE(interval.Contains(T{-1}));
+        }
+        EXPECT_FALSE(interval.Contains(T{11}));
+    }
+
+    TYPED_TEST(IntervalTypedTest, ContainsInterval)
+    {
+        using T = TypeParam;
+        const ClosedOpenInterval<T> i(T{0}, T{10});
+
+        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<T>(T{2}, T{8}))); // Fully inside
+        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<T>(T{0}, T{10}))); // Identical
+        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<T>(T{0}, T{5}))); // Touching start
+        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<T>(T{5}, T{10}))); // Touching end
+        EXPECT_TRUE(i.ContainsInterval(ClosedOpenInterval<T>(T{5}, T{5}))); // Empty inside
+
+        if constexpr (std::is_signed_v<T>)
+        {
+            EXPECT_FALSE(i.ContainsInterval(ClosedOpenInterval<T>(T{-1}, T{5}))); // Overlap start
+            EXPECT_FALSE(i.ContainsInterval(ClosedOpenInterval<T>(T{-1}, T{11}))); // Superset
+        }
+        EXPECT_FALSE(i.ContainsInterval(ClosedOpenInterval<T>(T{5}, T{11}))); // Overlap end
+    }
+
+    TYPED_TEST(IntervalTypedTest, Intersects)
+    {
+        using T = TypeParam;
+        const ClosedOpenInterval<T> i(T{5}, T{15});
+
+        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{10})));  // Overlap start
+        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{10}, T{20}))); // Overlap end
+        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{7}, T{12})));  // Subset
+        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{20})));  // Superset
+
+        // Adjacent is NOT intersecting
+        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{5})));  // Adjacent start
+        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{15}, T{20}))); // Adjacent end
 
         // Disjoint
-        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<int>(0, 5)));   // Disjoint before
-        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<int>(25, 30))); // Disjoint after
-
-        // Touching boundaries (exclusive end means no intersection)
-        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<int>(0, 10)));   // Touches start [0, 10)
-        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<int>(20, 30))); // Touches end [20, 30)
-
-        // Empty
-        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<int>(10, 10)));
-        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<int>(0, 0)));
+        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{4})));
+        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{16}, T{20})));
     }
 
-    TEST(ClosedOpenIntervalTest, Intersection)
+    TYPED_TEST(IntervalTypedTest, Adjacent)
     {
-        ClosedOpenInterval<int> i(10, 20); // [10, 20)
+        using T = TypeParam;
+        const ClosedOpenInterval<T> i(T{5}, T{15});
 
-        // Overlap end
-        auto res1 = i.Intersection(ClosedOpenInterval<int>(15, 25)); // [15, 20)
-        EXPECT_TRUE(res1.has_value());
-        EXPECT_EQ(res1->GetStart(), 15);
-        EXPECT_EQ(res1->GetEnd(), 20);
+        // Adjacent (touching)
+        EXPECT_TRUE(i.Adjacent(ClosedOpenInterval<T>(T{0}, T{5})));
+        EXPECT_TRUE(i.Adjacent(ClosedOpenInterval<T>(T{15}, T{20})));
+
+        // Overlapping is NOT adjacent
+        EXPECT_FALSE(i.Adjacent(ClosedOpenInterval<T>(T{0}, T{6})));
+        EXPECT_FALSE(i.Adjacent(ClosedOpenInterval<T>(T{14}, T{20})));
+        EXPECT_FALSE(i.Adjacent(ClosedOpenInterval<T>(T{7}, T{12})));
+
+        // Disjoint is NOT adjacent
+        EXPECT_FALSE(i.Adjacent(ClosedOpenInterval<T>(T{0}, T{4})));
+        EXPECT_FALSE(i.Adjacent(ClosedOpenInterval<T>(T{16}, T{20})));
+    }
+
+    TYPED_TEST(IntervalTypedTest, IntersectsOrAdjacent)
+    {
+        using T = TypeParam;
+        const ClosedOpenInterval<T> i(T{5}, T{15});
+
+        // Overlapping
+        EXPECT_TRUE(i.IntersectsOrAdjacent(ClosedOpenInterval<T>(T{0}, T{10})));
+        EXPECT_TRUE(i.IntersectsOrAdjacent(ClosedOpenInterval<T>(T{10}, T{20})));
+
+        // Adjacent
+        EXPECT_TRUE(i.IntersectsOrAdjacent(ClosedOpenInterval<T>(T{0}, T{5})));
+        EXPECT_TRUE(i.IntersectsOrAdjacent(ClosedOpenInterval<T>(T{15}, T{20})));
+
+        // Disjoint
+        EXPECT_FALSE(i.IntersectsOrAdjacent(ClosedOpenInterval<T>(T{0}, T{4})));
+        EXPECT_FALSE(i.IntersectsOrAdjacent(ClosedOpenInterval<T>(T{16}, T{20})));
+    }
+
+    TYPED_TEST(IntervalTypedTest, DistanceTo)
+    {
+        using T = TypeParam;
+        const ClosedOpenInterval<T> i(T{10}, T{20});
+
+        // Overlapping
+        EXPECT_EQ(i.DistanceTo(ClosedOpenInterval<T>(T{15}, T{25})), T{0});
+        // Adjacent
+        EXPECT_EQ(i.DistanceTo(ClosedOpenInterval<T>(T{20}, T{25})), T{0});
+        EXPECT_EQ(i.DistanceTo(ClosedOpenInterval<T>(T{5}, T{10})), T{0});
+
+        // Disjoint
+        EXPECT_EQ(i.DistanceTo(ClosedOpenInterval<T>(T{22}, T{25})), T{2});
+        EXPECT_EQ(i.DistanceTo(ClosedOpenInterval<T>(T{5}, T{8})), T{2});
+    }
+
+    TYPED_TEST(IntervalTypedTest, Intersection)
+    {
+        using T = TypeParam;
+        const ClosedOpenInterval<T> i(T{10}, T{20});
 
         // Overlap start
-        auto res2 = i.Intersection(ClosedOpenInterval<int>(5, 15)); // [10, 15)
-        EXPECT_TRUE(res2.has_value());
-        EXPECT_EQ(res2->GetStart(), 10);
-        EXPECT_EQ(res2->GetEnd(), 15);
+        auto res1 = i.Intersection(ClosedOpenInterval<T>(T{5}, T{15}));
+        EXPECT_TRUE(res1.has_value());
+        // EXPECT_EQ now works because operator== is in namespace bslt
+        EXPECT_EQ(res1.value(), ClosedOpenInterval<T>(T{10}, T{15}));
 
-        // Fully inside
-        auto res3 = i.Intersection(ClosedOpenInterval<int>(12, 18)); // [12, 18)
+        // Overlap end
+        auto res2 = i.Intersection(ClosedOpenInterval<T>(T{15}, T{25}));
+        EXPECT_TRUE(res2.has_value());
+        EXPECT_EQ(res2.value(), ClosedOpenInterval<T>(T{15}, T{20}));
+
+        // Subset
+        auto res3 = i.Intersection(ClosedOpenInterval<T>(T{12}, T{18}));
         EXPECT_TRUE(res3.has_value());
-        EXPECT_EQ(res3->GetStart(), 12);
-        EXPECT_EQ(res3->GetEnd(), 18);
+        EXPECT_EQ(res3.value(), ClosedOpenInterval<T>(T{12}, T{18}));
 
-        // Contains this
-        auto res4 = i.Intersection(ClosedOpenInterval<int>(5, 25)); // [10, 20)
+        // Superset
+        auto res4 = i.Intersection(ClosedOpenInterval<T>(T{5}, T{25}));
         EXPECT_TRUE(res4.has_value());
-        EXPECT_EQ(res4->GetStart(), 10);
-        EXPECT_EQ(res4->GetEnd(), 20);
+        EXPECT_EQ(res4.value(), ClosedOpenInterval<T>(T{10}, T{20}));
 
-        // Disjoint (touching)
-        EXPECT_FALSE(i.Intersection(ClosedOpenInterval<int>(0, 10)).has_value());
-        EXPECT_FALSE(i.Intersection(ClosedOpenInterval<int>(20, 30)).has_value());
+        // Adjacent
+        auto res5 = i.Intersection(ClosedOpenInterval<T>(T{20}, T{25}));
+        EXPECT_FALSE(res5.has_value());
 
-        // Disjoint (far)
-        EXPECT_FALSE(i.Intersection(ClosedOpenInterval<int>(0, 5)).has_value());
-
-        // Test template return type
-        auto res_double = i.Intersection<int, double>(ClosedOpenInterval<int>(15, 25));
-        EXPECT_TRUE(res_double.has_value());
-        EXPECT_DOUBLE_EQ(res_double->GetStart(), 15.0);
-        EXPECT_DOUBLE_EQ(res_double->GetEnd(), 20.0);
+        // Disjoint
+        auto res6 = i.Intersection(ClosedOpenInterval<T>(T{0}, T{5}));
+        EXPECT_FALSE(res6.has_value());
     }
 
-    TEST(ClosedOpenIntervalTest, Clamp)
+    TYPED_TEST(IntervalTypedTest, Clamp)
     {
-        ClosedOpenInterval<int> i(10, 20); // [10, 20)
-        // Clamp to boundary [15, 25) -> [15, 20)
-        auto res1 = i.Clamp(ClosedOpenInterval<int>(15, 25));
-        EXPECT_TRUE(res1.has_value());
-        EXPECT_EQ(res1.value(), ClosedOpenInterval<int>(15, 20));
+        using T = TypeParam;
+        // Clamp is synonymous with Intersection for this class.
+        const ClosedOpenInterval<T> i(T{10}, T{20});
+        const ClosedOpenInterval<T> boundary(T{15}, T{25});
 
-        // Clamp to boundary [5, 15) -> [10, 15)
-        auto res2 = i.Clamp(ClosedOpenInterval<int>(5, 15));
+        auto res = i.Clamp(boundary);
+        EXPECT_TRUE(res.has_value());
+        EXPECT_EQ(res.value(), ClosedOpenInterval<T>(T{15}, T{20}));
+
+        auto res2 = boundary.Clamp(i);
         EXPECT_TRUE(res2.has_value());
-        EXPECT_EQ(res2.value(), ClosedOpenInterval<int>(10, 15));
+        EXPECT_EQ(res2.value(), ClosedOpenInterval<T>(T{15}, T{20}));
 
-        // Clamp to boundary [12, 18) (inside) -> [12, 18)
-        auto res3 = i.Clamp(ClosedOpenInterval<int>(12, 18));
+        const ClosedOpenInterval<T> disjoint_boundary(T{30}, T{40});
+        auto res3 = i.Clamp(disjoint_boundary);
+        EXPECT_FALSE(res3.has_value());
+    }
+
+    TYPED_TEST(IntervalTypedTest, Merge)
+    {
+        using T = TypeParam;
+        const ClosedOpenInterval<T> i(T{10}, T{20});
+
+        // Overlapping
+        auto res1 = i.Merge(ClosedOpenInterval<T>(T{15}, T{25}));
+        EXPECT_TRUE(res1.has_value());
+        EXPECT_EQ(res1.value(), ClosedOpenInterval<T>(T{10}, T{25}));
+
+        // Adjacent
+        auto res2 = i.Merge(ClosedOpenInterval<T>(T{20}, T{25}));
+        EXPECT_TRUE(res2.has_value());
+        EXPECT_EQ(res2.value(), ClosedOpenInterval<T>(T{10}, T{25}));
+
+        auto res3 = i.Merge(ClosedOpenInterval<T>(T{5}, T{10}));
         EXPECT_TRUE(res3.has_value());
-        EXPECT_EQ(res3.value(), ClosedOpenInterval<int>(12, 18));
+        EXPECT_EQ(res3.value(), ClosedOpenInterval<T>(T{5}, T{20}));
 
-        // Clamp to boundary [5, 25) (outside) -> [10, 20)
-        auto res4 = i.Clamp(ClosedOpenInterval<int>(5, 25));
+        // Subset
+        auto res4 = i.Merge(ClosedOpenInterval<T>(T{12}, T{18}));
         EXPECT_TRUE(res4.has_value());
-        EXPECT_EQ(res4.value(), ClosedOpenInterval<int>(10, 20));
-
-        // No overlap
-        EXPECT_FALSE(i.Clamp(ClosedOpenInterval<int>(0, 10)).has_value());
-        EXPECT_FALSE(i.Clamp(ClosedOpenInterval<int>(20, 30)).has_value());
-    }
-
-    TEST(ClosedOpenIntervalTest, Equality)
-    {
-        EXPECT_TRUE(ClosedOpenInterval<int>(10, 20) == ClosedOpenInterval<int>(10, 20));
-        EXPECT_FALSE(ClosedOpenInterval<int>(10, 20) == ClosedOpenInterval<int>(10, 21));
-        EXPECT_FALSE(ClosedOpenInterval<int>(10, 20) == ClosedOpenInterval<int>(11, 20));
-        EXPECT_TRUE(ClosedOpenInterval<int>(10, 20) != ClosedOpenInterval<int>(11, 20));
-
-        // Test different types
-        EXPECT_TRUE(ClosedOpenInterval<int>(10, 20) == ClosedOpenInterval<double>(10.0, 20.0));
-        EXPECT_FALSE(ClosedOpenInterval<int>(10, 20) == ClosedOpenInterval<double>(10.0, 20.1));
-    }
-
-    TEST(ClosedOpenIntervalTest, Stringify)
-    {
-        constexpr ClosedOpenInterval<int> i(10, 20);
-        EXPECT_EQ(absl::StrFormat("%v", i), "[10, 20)");
-
-        constexpr ClosedOpenInterval<double> d(-1.5, 2.5);
-        EXPECT_EQ(absl::StrFormat("%v", d), "[-1.5, 2.5)");
-    }
-
-    // --- OpenClosedInterval (start, end] ---
-
-    TEST(OpenClosedIntervalTest, ConstructorAndGetters)
-    {
-        constexpr OpenClosedInterval<int> i(10, 20);
-        EXPECT_EQ(i.GetStart(), 10);
-        EXPECT_EQ(i.GetEnd(), 20);
-
-        constexpr OpenClosedInterval<int> i_reversed(20, 10);
-        EXPECT_EQ(i_reversed.GetStart(), 10);
-        EXPECT_EQ(i_reversed.GetEnd(), 20);
-    }
-
-    TEST(OpenClosedIntervalTest, IsEmptyAndLength)
-    {
-        constexpr OpenClosedInterval<int> i(10, 20);
-        EXPECT_FALSE(i.IsEmpty());
-        EXPECT_EQ(i.Length(), 10);
-
-        constexpr OpenClosedInterval<int> i_empty(10, 10);
-        EXPECT_TRUE(i_empty.IsEmpty());
-        EXPECT_EQ(i_empty.Length(), 0);
-    }
-
-    TEST(OpenClosedIntervalTest, Contains)
-    {
-        constexpr OpenClosedInterval<int> i(10, 20); // (10, 20]
-        EXPECT_FALSE(i.Contains(9));
-        EXPECT_FALSE(i.Contains(10)); // Exclusive start
-        EXPECT_TRUE(i.Contains(11));
-        EXPECT_TRUE(i.Contains(15));
-        EXPECT_TRUE(i.Contains(20));  // Inclusive end
-        EXPECT_FALSE(i.Contains(21));
-
-        // Test with different types
-        EXPECT_FALSE(i.Contains(10.0));
-        EXPECT_TRUE(i.Contains(10.0001));
-        EXPECT_TRUE(i.Contains(20.0));
-
-        constexpr OpenClosedInterval<int> i_empty(10, 10);
-        EXPECT_FALSE(i_empty.Contains(10));
-    }
-
-    TEST(OpenClosedIntervalTest, Intersects)
-    {
-        constexpr OpenClosedInterval<int> i(10, 20); // (10, 20]
-        EXPECT_TRUE(i.Intersects(OpenClosedInterval<int>(10, 20))); // Identical
-        EXPECT_TRUE(i.Intersects(OpenClosedInterval<int>(8, 12)));  // Overlap start
-        EXPECT_TRUE(i.Intersects(OpenClosedInterval<int>(18, 22))); // Overlap end
-        EXPECT_TRUE(i.Intersects(OpenClosedInterval<int>(8, 22)));  // Contains this
+        EXPECT_EQ(res4.value(), ClosedOpenInterval<T>(T{10}, T{20}));
 
         // Disjoint
-        EXPECT_FALSE(i.Intersects(OpenClosedInterval<int>(0, 5)));
-
-        // Touching boundaries (exclusive start means no intersection)
-        EXPECT_FALSE(i.Intersects(OpenClosedInterval<int>(0, 10)));   // Touches start (0, 10]
-        EXPECT_FALSE(i.Intersects(OpenClosedInterval<int>(20, 30))); // Touches end (20, 30]
+        auto res5 = i.Merge(ClosedOpenInterval<T>(T{21}, T{25}));
+        EXPECT_FALSE(res5.has_value());
     }
 
-    TEST(OpenClosedIntervalTest, Intersection)
+    TYPED_TEST(IntervalTypedTest, Combine)
     {
-        constexpr OpenClosedInterval<int> i(10, 20); // (10, 20]
+        using T = TypeParam;
+        const ClosedOpenInterval<T> i(T{10}, T{20});
 
-        // Overlap end
-        const auto res1 = i.Intersection(OpenClosedInterval<int>(15, 25)); // (15, 20]
-        EXPECT_TRUE(res1.has_value());
-        EXPECT_EQ(res1.value(), OpenClosedInterval<int>(15, 20));
+        // Overlapping
+        auto res1 = i.Combine(ClosedOpenInterval<T>(T{15}, T{25}));
+        EXPECT_EQ(res1, ClosedOpenInterval<T>(T{10}, T{25}));
 
-        // Overlap start
-        const auto res2 = i.Intersection(OpenClosedInterval<int>(5, 15)); // (10, 15]
-        EXPECT_TRUE(res2.has_value());
-        EXPECT_EQ(res2.value(), OpenClosedInterval<int>(10, 15));
+        // Adjacent
+        auto res2 = i.Combine(ClosedOpenInterval<T>(T{20}, T{25}));
+        EXPECT_EQ(res2, ClosedOpenInterval<T>(T{10}, T{25}));
 
-        // Disjoint (touching)
-        EXPECT_FALSE(i.Intersection(OpenClosedInterval<int>(0, 10)).has_value());
-        EXPECT_FALSE(i.Intersection(OpenClosedInterval<int>(20, 30)).has_value());
+        // Disjoint (Key difference from Merge)
+        auto res3 = i.Combine(ClosedOpenInterval<T>(T{21}, T{25}));
+        EXPECT_EQ(res3, ClosedOpenInterval<T>(T{10}, T{25}));
+
+        auto res4 = i.Combine(ClosedOpenInterval<T>(T{0}, T{5}));
+        EXPECT_EQ(res4, ClosedOpenInterval<T>(T{0}, T{20}));
     }
 
-    TEST(OpenClosedIntervalTest, Stringify)
+    class IntervalTest : public ::testing::Test {};
+
+    TEST_F(IntervalTest, MidpointIntToDouble)
     {
-        constexpr OpenClosedInterval<int> i(10, 20);
-        EXPECT_EQ(absl::StrFormat("%v", i), "(10, 20]");
+        constexpr ClosedOpenInterval<int> interval_odd(0, 5);
+        // Test templated return type for Midpoint
+        EXPECT_DOUBLE_EQ(interval_odd.Midpoint<double>(), 2.5);
     }
 
-    // --- ClosedInterval [start, end] ---
-
-    TEST(ClosedIntervalTest, ConstructorAndGetters)
+    TEST_F(IntervalTest, ContainsDifferentTypes)
     {
-        constexpr ClosedInterval<int> i(10, 20);
-        EXPECT_EQ(i.GetStart(), 10);
-        EXPECT_EQ(i.GetEnd(), 20);
+        constexpr ClosedOpenInterval<int> i_int(0, 10);
+        EXPECT_TRUE(i_int.Contains(5.5));
+        EXPECT_FALSE(i_int.Contains(10.1));
+        EXPECT_FALSE(i_int.Contains(-0.1));
 
-        constexpr ClosedInterval<int> i_reversed(20, 10);
-        EXPECT_EQ(i_reversed.GetStart(), 10);
-        EXPECT_EQ(i_reversed.GetEnd(), 20);
+        constexpr ClosedOpenInterval<double> i_double(0.0, 10.0);
+        EXPECT_TRUE(i_double.Contains(5));
+        EXPECT_FALSE(i_double.Contains(10));
     }
 
-    TEST(ClosedIntervalTest, IsEmptyAndLength)
+    TEST_F(IntervalTest, CrossTypeOperations)
     {
-        constexpr ClosedInterval<int> i(10, 20);
-        EXPECT_FALSE(i.IsEmpty());
-        EXPECT_EQ(i.Length(), 10);
+        constexpr ClosedOpenInterval<int> i_int(0, 10);
+        constexpr ClosedOpenInterval<double> i_double(5.5, 15.5);
 
-        // A single-point interval is not empty
-        constexpr ClosedInterval<int> i_point(10, 10);
-        EXPECT_FALSE(i_point.IsEmpty());
-        EXPECT_EQ(i_point.Length(), 0);
+        constexpr auto res_int = i_int.Intersection(i_double);
+        ASSERT_TRUE(res_int.has_value());
+        EXPECT_EQ(res_int.value(), ClosedOpenInterval<int>(5, 10));
+
+        // Test explicit templated return type <double>
+        constexpr auto res_double = i_int.Intersection<double, double>(i_double);
+        ASSERT_TRUE(res_double.has_value());
+        EXPECT_DOUBLE_EQ(res_double.value().GetStart(), 5.5);
+        EXPECT_DOUBLE_EQ(res_double.value().GetEnd(), 10.0);
+
+        // Test Merge with explicit return type
+        constexpr auto merge_double = i_int.Merge<double, double>(i_double);
+        ASSERT_TRUE(merge_double.has_value());
+        EXPECT_DOUBLE_EQ(merge_double.value().GetStart(), 0.0);
+        EXPECT_DOUBLE_EQ(merge_double.value().GetEnd(), 15.5);
+
+        constexpr ClosedOpenInterval<double> i_int_disjoint(20, 30);
+        constexpr auto combine_double = i_double.Combine<double>(i_int_disjoint);
+        EXPECT_DOUBLE_EQ(combine_double.GetStart(), 5.5);
+        EXPECT_DOUBLE_EQ(combine_double.GetEnd(), 30.0);
     }
 
-    TEST(ClosedIntervalTest, Contains)
+    TEST_F(IntervalTest, AbslHash)
     {
-        constexpr ClosedInterval<int> i(10, 20); // [10, 20]
-        EXPECT_FALSE(i.Contains(9));
-        EXPECT_TRUE(i.Contains(10));  // Inclusive start
-        EXPECT_TRUE(i.Contains(15));
-        EXPECT_TRUE(i.Contains(20));  // Inclusive end
-        EXPECT_FALSE(i.Contains(21));
+        using IntervalInt = ClosedOpenInterval<int>;
+        constexpr absl::Hash<IntervalInt> hasher;
 
-        // Test with different types
-        EXPECT_TRUE(i.Contains(10.0));
-        EXPECT_TRUE(i.Contains(20.0));
+        constexpr IntervalInt i1(0, 10);
+        constexpr IntervalInt i2(0, 10);
+        constexpr IntervalInt i3(0, 11);
+        constexpr IntervalInt i4(1, 10);
 
-        constexpr ClosedInterval<int> i_point(10, 10);
-        EXPECT_TRUE(i_point.Contains(10));
-        EXPECT_FALSE(i_point.Contains(11));
+        EXPECT_EQ(hasher(i1), hasher(i2));
+        EXPECT_NE(hasher(i1), hasher(i3));
+        EXPECT_NE(hasher(i1), hasher(i4));
     }
 
-    TEST(ClosedIntervalTest, Intersects)
+    TEST_F(IntervalTest, AbslStringify)
     {
-        constexpr ClosedInterval<int> i(10, 20); // [10, 20]
-        EXPECT_TRUE(i.Intersects(ClosedInterval<int>(10, 20))); // Identical
-        EXPECT_TRUE(i.Intersects(ClosedInterval<int>(8, 12)));  // Overlap start
-        EXPECT_TRUE(i.Intersects(ClosedInterval<int>(18, 22))); // Overlap end
-        EXPECT_TRUE(i.Intersects(ClosedInterval<int>(8, 22)));  // Contains this
+        constexpr ClosedOpenInterval<int> i_int(-5, 5);
+        EXPECT_EQ(absl::StrFormat("%v", i_int), "[-5, 5)");
 
-        // Disjoint
-        EXPECT_FALSE(i.Intersects(ClosedInterval<int>(0, 5)));
-        EXPECT_FALSE(i.Intersects(ClosedInterval<int>(0, 9)));
+        constexpr ClosedOpenInterval<double> i_double(0.5, 2.5);
+        EXPECT_EQ(absl::StrFormat("%v", i_double), "[0.5, 2.5)");
 
-        // Touching boundaries (inclusive end means intersection)
-        EXPECT_TRUE(i.Intersects(ClosedInterval<int>(0, 10)));   // Touches start [0, 10]
-        EXPECT_TRUE(i.Intersects(ClosedInterval<int>(20, 30))); // Touches end [20, 30]
+        constexpr ClosedOpenInterval<int> i_empty(0, 0);
+        EXPECT_EQ(absl::StrFormat("%v", i_empty), "[0, 0)");
     }
-
-    TEST(ClosedIntervalTest, Intersection)
-    {
-        ClosedInterval<int> i(10, 20); // [10, 20]
-
-        // Overlap end
-        auto res1 = i.Intersection(ClosedInterval<int>(15, 25)); // [15, 20]
-        EXPECT_TRUE(res1.has_value());
-        EXPECT_EQ(res1.value(), ClosedInterval<int>(15, 20));
-
-        // Overlap start
-        auto res2 = i.Intersection(ClosedInterval<int>(5, 15)); // [10, 15]
-        EXPECT_TRUE(res2.has_value());
-        EXPECT_EQ(res2.value(), ClosedInterval<int>(10, 15));
-
-        // Disjoint (touching)
-        auto res3 = i.Intersection(ClosedInterval<int>(0, 10)); // [10, 10]
-        EXPECT_TRUE(res3.has_value());
-        EXPECT_EQ(res3.value(), ClosedInterval<int>(10, 10));
-
-        auto res4 = i.Intersection(ClosedInterval<int>(20, 30)); // [20, 20]
-        EXPECT_TRUE(res4.has_value());
-        EXPECT_EQ(res4.value(), ClosedInterval<int>(20, 20));
-
-        // Disjoint (far)
-        EXPECT_FALSE(i.Intersection(ClosedInterval<int>(0, 9)).has_value());
-        EXPECT_FALSE(i.Intersection(ClosedInterval<int>(21, 30)).has_value());
-    }
-
-    TEST(ClosedIntervalTest, Stringify)
-    {
-        constexpr ClosedInterval<int> i(10, 20);
-        EXPECT_EQ(absl::StrFormat("%v", i), "[10, 20]");
-    }
-
-    // --- OpenInterval (start, end) ---
-
-    TEST(OpenIntervalTest, ConstructorAndGetters)
-    {
-        constexpr OpenInterval<int> i(10, 20);
-        EXPECT_EQ(i.GetStart(), 10);
-        EXPECT_EQ(i.GetEnd(), 20);
-
-        constexpr OpenInterval<int> i_reversed(20, 10);
-        EXPECT_EQ(i_reversed.GetStart(), 10);
-        EXPECT_EQ(i_reversed.GetEnd(), 20);
-    }
-
-    TEST(OpenIntervalTest, IsEmptyAndLength)
-    {
-        constexpr OpenInterval<int> i(10, 20);
-        EXPECT_FALSE(i.IsEmpty());
-        EXPECT_EQ(i.Length(), 10);
-
-        constexpr OpenInterval<int> i_empty(10, 10);
-        EXPECT_TRUE(i_empty.IsEmpty());
-        EXPECT_EQ(i_empty.Length(), 0);
-    }
-
-    TEST(OpenIntervalTest, Contains)
-    {
-        constexpr OpenInterval<int> i(10, 20); // (10, 20)
-        EXPECT_FALSE(i.Contains(9));
-        EXPECT_FALSE(i.Contains(10)); // Exclusive start
-        EXPECT_TRUE(i.Contains(11));
-        EXPECT_TRUE(i.Contains(15));
-        EXPECT_TRUE(i.Contains(19));
-        EXPECT_FALSE(i.Contains(20)); // Exclusive end
-        EXPECT_FALSE(i.Contains(21));
-
-        // Test with different types
-        EXPECT_FALSE(i.Contains(10.0));
-        EXPECT_TRUE(i.Contains(10.0001));
-        EXPECT_TRUE(i.Contains(19.9999));
-        EXPECT_FALSE(i.Contains(20.0));
-
-        constexpr OpenInterval<int> i_empty(10, 10);
-        EXPECT_FALSE(i_empty.Contains(10));
-    }
-
-    TEST(OpenIntervalTest, Intersects)
-    {
-        constexpr OpenInterval<int> i(10, 20); // (10, 20)
-        EXPECT_TRUE(i.Intersects(OpenInterval<int>(10, 20))); // Identical
-        EXPECT_TRUE(i.Intersects(OpenInterval<int>(8, 12)));  // Overlap start
-        EXPECT_TRUE(i.Intersects(OpenInterval<int>(18, 22))); // Overlap end
-        EXPECT_TRUE(i.Intersects(OpenInterval<int>(8, 22)));  // Contains this
-
-        // Disjoint
-        EXPECT_FALSE(i.Intersects(OpenInterval<int>(0, 5)));
-
-        // Touching boundaries (all exclusive means no intersection)
-        EXPECT_FALSE(i.Intersects(OpenInterval<int>(0, 10)));
-        // (10, 20) vs (0, 11). max(10,0)=10. min(20,11)=11. 10 < 11. Intersects.
-        EXPECT_TRUE(i.Intersects(OpenInterval<int>(0, 11)));
-        EXPECT_FALSE(i.Intersects(OpenInterval<int>(20, 30)));
-    }
-
-    TEST(OpenIntervalTest, Intersection)
-    {
-        constexpr OpenInterval<int> i(10, 20); // (10, 20)
-
-        // Overlap end
-        const auto res1 = i.Intersection(OpenInterval<int>(15, 25)); // (15, 20)
-        EXPECT_TRUE(res1.has_value());
-        EXPECT_EQ(res1.value(), OpenInterval<int>(15, 20));
-
-        // Overlap start
-        const auto res2 = i.Intersection(OpenInterval<int>(5, 15)); // (10, 15)
-        EXPECT_TRUE(res2.has_value());
-        EXPECT_EQ(res2.value(), OpenInterval<int>(10, 15));
-
-        // Disjoint (touching)
-        EXPECT_FALSE(i.Intersection(OpenInterval<int>(0, 10)).has_value());
-        EXPECT_FALSE(i.Intersection(OpenInterval<int>(20, 30)).has_value());
-
-        // Disjoint (far)
-        EXPECT_FALSE(i.Intersection(OpenInterval<int>(0, 5)).has_value());
-    }
-
-    TEST(OpenIntervalTest, Stringify)
-    {
-        constexpr OpenInterval<int> i(10, 20);
-        EXPECT_EQ(absl::StrFormat("%v", i), "(10, 20)");
-    }
-
 } // namespace bslt::test
