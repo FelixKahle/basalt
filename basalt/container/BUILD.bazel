@@ -19,5 +19,29 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-build --cxxopt='-std=c++20'
-build --host_cxxopt='-std=c++20'
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+cc_library(
+    name = "interval_set",
+    hdrs = [
+        "interval_set.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//basalt/base:config",
+        "//basalt/math:interval",
+        "@abseil-cpp//absl/container:btree",
+        "@abseil-cpp//absl/container:common",
+    ],
+)
+
+cc_test(
+    name = "interval_set_test",
+    srcs = ["interval_set_test.cc"],
+    deps = [
+        ":interval_set",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
