@@ -56,6 +56,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":math",
+        "@abseil-cpp//absl/container:btree",
         "@abseil-cpp//absl/hash:hash",
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/strings:str_format",

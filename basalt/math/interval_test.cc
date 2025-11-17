@@ -23,27 +23,77 @@
 #include "gtest/gtest.h"
 #include "absl/hash/hash.h"
 #include "absl/strings/str_format.h"
+#include "absl/container/btree_set.h"
 
 namespace bslt::test
 {
-    static_assert(Interval<ClosedOpenInterval<int32_t>>, "ClosedOpenInterval<int32_t> should satisfy the Interval concept");
-    static_assert(Interval<ClosedOpenInterval<double>>, "ClosedOpenInterval<double> should satisfy the Interval concept");
+    static_assert(Interval<ClosedOpenInterval<int32_t>>,
+                  "ClosedOpenInterval<int32_t> should satisfy the Interval concept");
+    static_assert(Interval<ClosedOpenInterval<double>>,
+                  "ClosedOpenInterval<double> should satisfy the Interval concept");
 
-    static_assert(Interval<OpenClosedInterval<int32_t>>, "OpenClosedInterval<int32_t> should satisfy the Interval concept");
-    static_assert(Interval<OpenClosedInterval<double>>, "OpenClosedInterval<double> should satisfy the Interval concept");
-
+    static_assert(Interval<OpenClosedInterval<int32_t>>,
+                  "OpenClosedInterval<int32_t> should satisfy the Interval concept");
+    static_assert(Interval<OpenClosedInterval<double>>,
+                  "OpenClosedInterval<double> should satisfy the Interval concept");
     static_assert(Interval<ClosedInterval<int32_t>>, "ClosedInterval<int32_t> should satisfy the Interval concept");
     static_assert(Interval<ClosedInterval<double>>, "ClosedInterval<double> should satisfy the Interval concept");
-
     static_assert(Interval<OpenInterval<int32_t>>, "OpenInterval<int32_t> should satisfy the Interval concept");
     static_assert(Interval<OpenInterval<double>>, "OpenInterval<double> should satisfy the Interval concept");
-
 
     using TestTypes = ::testing::Types<int, float, double, size_t>;
 
     template <typename T>
-    class ClosedOpenIntervalTypedTest : public ::testing::Test {};
+    class ClosedOpenIntervalTypedTest : public ::testing::Test
+    {
+    };
+
     TYPED_TEST_SUITE(ClosedOpenIntervalTypedTest, TestTypes);
+
+    TYPED_TEST(ClosedOpenIntervalTypedTest, WorksForBTreeSet)
+    {
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        struct IntervalCompare
+        {
+            bool operator()(Interval const& a, Interval const& b) const noexcept
+            {
+                if (a.GetStart() < b.GetStart())
+                {
+                    return true;
+                }
+                if (b.GetStart() < a.GetStart())
+                {
+                    return false;
+                }
+                return a.GetEnd() < b.GetEnd();
+            }
+        };
+
+        absl::btree_set<Interval, IntervalCompare> s;
+        s.insert(Interval(T{10}, T{20}));
+        s.insert(Interval(T{0}, T{10}));
+        s.insert(Interval(T{5}, T{15}));
+        s.insert(Interval(T{0}, T{10})); // duplicate insert
+
+        EXPECT_EQ(s.size(), static_cast<size_t>(3));
+
+        auto it = s.begin();
+        ASSERT_NE(it, s.end());
+        EXPECT_EQ(it->GetStart(), T{0});
+        EXPECT_EQ(it->GetEnd(), T{10});
+        ++it;
+        ASSERT_NE(it, s.end());
+        EXPECT_EQ(it->GetStart(), T{5});
+        EXPECT_EQ(it->GetEnd(), T{15});
+        ++it;
+        ASSERT_NE(it, s.end());
+        EXPECT_EQ(it->GetStart(), T{10});
+        EXPECT_EQ(it->GetEnd(), T{20});
+        ++it;
+        EXPECT_EQ(it, s.end());
+    }
 
     TYPED_TEST(ClosedOpenIntervalTypedTest, ConstructionAndGetters)
     {
@@ -178,14 +228,15 @@ namespace bslt::test
         using T = TypeParam;
         const ClosedOpenInterval<T> i(T{5}, T{15}); // [5, 15)
 
-        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{10})));  // Overlap start [5, 10)
+        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{10}))); // Overlap start [5, 10)
         EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{10}, T{20}))); // Overlap end [10, 15)
-        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{7}, T{12})));  // Subset
-        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{20})));  // Superset
+        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{7}, T{12}))); // Subset
+        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{20}))); // Superset
 
         // Adjacent is NOT intersecting for [start, end)
-        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{5})));  // Adjacent start, intersection is [5, 5) (empty)
-        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{15}, T{20}))); // Adjacent end, intersection is [15, 15) (empty)
+        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{5}))); // Adjacent start, intersection is [5, 5) (empty)
+        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{15}, T{20})));
+        // Adjacent end, intersection is [15, 15) (empty)
 
         // Disjoint
         EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{0}, T{4})));
@@ -354,7 +405,10 @@ namespace bslt::test
     // =========================================================================
 
     template <typename T>
-    class OpenClosedIntervalTypedTest : public ::testing::Test {};
+    class OpenClosedIntervalTypedTest : public ::testing::Test
+    {
+    };
+
     TYPED_TEST_SUITE(OpenClosedIntervalTypedTest, TestTypes);
 
     TYPED_TEST(OpenClosedIntervalTypedTest, ConstructionAndGetters)
@@ -490,14 +544,15 @@ namespace bslt::test
         using T = TypeParam;
         const OpenClosedInterval<T> i(T{5}, T{15}); // (5, 15]
 
-        EXPECT_TRUE(i.Intersects(OpenClosedInterval<T>(T{0}, T{10})));  // Overlap start (5, 10]
+        EXPECT_TRUE(i.Intersects(OpenClosedInterval<T>(T{0}, T{10}))); // Overlap start (5, 10]
         EXPECT_TRUE(i.Intersects(OpenClosedInterval<T>(T{10}, T{20}))); // Overlap end (10, 15]
-        EXPECT_TRUE(i.Intersects(OpenClosedInterval<T>(T{7}, T{12})));  // Subset
-        EXPECT_TRUE(i.Intersects(OpenClosedInterval<T>(T{0}, T{20})));  // Superset
+        EXPECT_TRUE(i.Intersects(OpenClosedInterval<T>(T{7}, T{12}))); // Subset
+        EXPECT_TRUE(i.Intersects(OpenClosedInterval<T>(T{0}, T{20}))); // Superset
 
         // Adjacent is NOT intersecting for (start, end]
-        EXPECT_FALSE(i.Intersects(OpenClosedInterval<T>(T{0}, T{5})));  // Adjacent start, intersection is (5, 5] (empty)
-        EXPECT_FALSE(i.Intersects(OpenClosedInterval<T>(T{15}, T{20}))); // Adjacent end, intersection is (15, 15] (empty)
+        EXPECT_FALSE(i.Intersects(OpenClosedInterval<T>(T{0}, T{5}))); // Adjacent start, intersection is (5, 5] (empty)
+        EXPECT_FALSE(i.Intersects(OpenClosedInterval<T>(T{15}, T{20})));
+        // Adjacent end, intersection is (15, 15] (empty)
 
         // Disjoint
         EXPECT_FALSE(i.Intersects(OpenClosedInterval<T>(T{0}, T{4})));
@@ -666,7 +721,10 @@ namespace bslt::test
     // =========================================================================
 
     template <typename T>
-    class ClosedIntervalTypedTest : public ::testing::Test {};
+    class ClosedIntervalTypedTest : public ::testing::Test
+    {
+    };
+
     TYPED_TEST_SUITE(ClosedIntervalTypedTest, TestTypes);
 
     TYPED_TEST(ClosedIntervalTypedTest, ConstructionAndGetters)
@@ -805,13 +863,13 @@ namespace bslt::test
         using T = TypeParam;
         const ClosedInterval<T> i(T{5}, T{15}); // [5, 15]
 
-        EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{0}, T{10})));  // Overlap start [5, 10]
+        EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{0}, T{10}))); // Overlap start [5, 10]
         EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{10}, T{20}))); // Overlap end [10, 15]
-        EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{7}, T{12})));  // Subset
-        EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{0}, T{20})));  // Superset
+        EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{7}, T{12}))); // Subset
+        EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{0}, T{20}))); // Superset
 
         // Adjacent IS intersecting for [start, end]
-        EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{0}, T{5})));  // Adjacent start, intersection is [5, 5]
+        EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{0}, T{5}))); // Adjacent start, intersection is [5, 5]
         EXPECT_TRUE(i.Intersects(ClosedInterval<T>(T{15}, T{20}))); // Adjacent end, intersection is [15, 15]
 
         // Disjoint
@@ -988,7 +1046,10 @@ namespace bslt::test
     // =========================================================================
 
     template <typename T>
-    class OpenIntervalTypedTest : public ::testing::Test {};
+    class OpenIntervalTypedTest : public ::testing::Test
+    {
+    };
+
     TYPED_TEST_SUITE(OpenIntervalTypedTest, TestTypes);
 
     TYPED_TEST(OpenIntervalTypedTest, ConstructionAndGetters)
@@ -1126,13 +1187,13 @@ namespace bslt::test
         using T = TypeParam;
         const OpenInterval<T> i(T{5}, T{15}); // (5, 15)
 
-        EXPECT_TRUE(i.Intersects(OpenInterval<T>(T{0}, T{10})));  // Overlap start (5, 10)
+        EXPECT_TRUE(i.Intersects(OpenInterval<T>(T{0}, T{10}))); // Overlap start (5, 10)
         EXPECT_TRUE(i.Intersects(OpenInterval<T>(T{10}, T{20}))); // Overlap end (10, 15)
-        EXPECT_TRUE(i.Intersects(OpenInterval<T>(T{7}, T{12})));  // Subset
-        EXPECT_TRUE(i.Intersects(OpenInterval<T>(T{0}, T{20})));  // Superset
+        EXPECT_TRUE(i.Intersects(OpenInterval<T>(T{7}, T{12}))); // Subset
+        EXPECT_TRUE(i.Intersects(OpenInterval<T>(T{0}, T{20}))); // Superset
 
         // Adjacent is NOT intersecting for (start, end)
-        EXPECT_FALSE(i.Intersects(OpenInterval<T>(T{0}, T{5})));  // Adjacent start, intersection is (5, 5) (empty)
+        EXPECT_FALSE(i.Intersects(OpenInterval<T>(T{0}, T{5}))); // Adjacent start, intersection is (5, 5) (empty)
         EXPECT_FALSE(i.Intersects(OpenInterval<T>(T{15}, T{20}))); // Adjacent end, intersection is (15, 15) (empty)
 
         // Disjoint
@@ -1301,7 +1362,9 @@ namespace bslt::test
     // General and Cross-Type Tests
     // =========================================================================
 
-    class IntervalTest : public ::testing::Test {};
+    class IntervalTest : public ::testing::Test
+    {
+    };
 
     TEST_F(IntervalTest, MidpointIntToDouble)
     {
