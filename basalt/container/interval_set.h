@@ -51,6 +51,7 @@ namespace bslt
     /// @tparam T The type of the interval's endpoints.
     /// @tparam Storage The storage backend.
     template <typename T, IntervalSetStorage Storage = IntervalSetStorage::kVector>
+        requires std::is_arithmetic_v<T>
     class IntervalSet;
 
     /// @brief An implementation of IntervalSet using a `std::vector`.
@@ -61,6 +62,7 @@ namespace bslt
     ///
     /// @tparam T The type of the interval's endpoints.
     template <typename T>
+        requires std::is_arithmetic_v<T>
     class IntervalSet<T, IntervalSetStorage::kVector>
     {
     public:
@@ -172,7 +174,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(new_interval.GetStart() - epsilon);
+            auto it = find_first_candidate(sub_with_floor(new_interval.GetStart(), epsilon));
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -297,7 +299,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(interval_to_remove.GetStart() - epsilon);
+            auto it = find_first_candidate(sub_with_floor(interval_to_remove.GetStart(), epsilon));
             if (it == m_intervals.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
                 return;
@@ -697,7 +699,7 @@ namespace bslt
                     return true;
                 }
             }
-            auto it_check = find_first_candidate(v - epsilon);
+            auto it_check = find_first_candidate(sub_with_floor(v, epsilon));
             if (it_check != m_intervals.end() && it_check->Contains(v, epsilon))
             {
                 return true;
@@ -736,7 +738,7 @@ namespace bslt
             {
                 return true;
             }
-            auto it = find_first_candidate(other.GetStart() - epsilon);
+            auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
             if (it == m_intervals.end())
             {
                 return false;
@@ -777,7 +779,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = find_first_candidate(other.GetStart() - epsilon);
+            auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
             if (it == m_intervals.end())
             {
                 return false;
@@ -787,7 +789,17 @@ namespace bslt
         }
 
     private:
-        container_type m_intervals;
+        static constexpr BASALT_FORCE_INLINE ValueType sub_with_floor(const ValueType lhs, const ValueType rhs) noexcept
+        {
+            if constexpr (std::is_unsigned_v<ValueType>)
+            {
+                return rhs > lhs ? ValueType(0) : ValueType(lhs - rhs);
+            }
+            else
+            {
+                return lhs - rhs;
+            }
+        }
 
         /// @brief Finds the first interval `it` such that `it.GetEnd() >= v`. (non-const)
         ///
@@ -834,6 +846,8 @@ namespace bslt
             }
             return std::prev(it);
         }
+
+        container_type m_intervals;
     };
 
     /// @brief An implementation of IntervalSet using `absl::btree_set`.
@@ -841,6 +855,7 @@ namespace bslt
     ///
     /// @tparam T The type of the interval's endpoints.
     template <typename T>
+        requires std::is_arithmetic_v<T>
     class IntervalSet<T, IntervalSetStorage::kBTree>
     {
     public:
@@ -967,9 +982,8 @@ namespace bslt
 
             if (erase_start != it)
             {
-                m_intervals.erase(erase_start, it);
+                it = m_intervals.erase(erase_start, it);
             }
-
             m_intervals.insert(it, merged_interval);
         }
 
@@ -988,7 +1002,7 @@ namespace bslt
             }
 
             // Search for start - epsilon
-            auto it = find_first_candidate(new_interval.GetStart() - epsilon);
+            auto it = find_first_candidate(sub_with_floor(new_interval.GetStart(), epsilon));
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -1022,25 +1036,29 @@ namespace bslt
                 return;
             }
 
-            container_type new_intervals;
+            std::vector<IntervalType> linear_buffer;
+            // High upper bound on size. We will most likely not need this much.
+            linear_buffer.reserve(m_intervals.size() + other.m_intervals.size());
+
             auto it_this = m_intervals.begin();
             auto it_other = other.m_intervals.begin();
 
-            std::optional<IntervalType> current_merged;
-            if (it_this->GetStart() <= it_other->GetStart())
+            bool start_with_this = (it_this->GetStart() <= it_other->GetStart());
+            IntervalType current_merged = start_with_this ? *it_this : *it_other;
+
+            if (start_with_this)
             {
-                current_merged = *it_this;
                 ++it_this;
             }
             else
             {
-                current_merged = *it_other;
                 ++it_other;
             }
 
             while (it_this != m_intervals.end() || it_other != other.m_intervals.end())
             {
                 const IntervalType* next_interval = nullptr;
+
                 if (it_this == m_intervals.end() ||
                     (it_other != other.m_intervals.end() && it_other->GetStart() < it_this->GetStart()))
                 {
@@ -1053,19 +1071,18 @@ namespace bslt
                     ++it_this;
                 }
 
-                if (current_merged->IntersectsOrAdjacent(*next_interval))
+                if (current_merged.IntersectsOrAdjacent(*next_interval))
                 {
-                    *current_merged = current_merged->Combine(*next_interval);
+                    current_merged = current_merged.Combine(*next_interval);
                 }
                 else
                 {
-                    new_intervals.insert(new_intervals.end(), *current_merged);
+                    linear_buffer.push_back(current_merged);
                     current_merged = *next_interval;
                 }
             }
-
-            new_intervals.insert(new_intervals.end(), *current_merged);
-            m_intervals = std::move(new_intervals);
+            linear_buffer.push_back(current_merged);
+            m_intervals = container_type(linear_buffer.begin(), linear_buffer.end());
         }
 
         /// @brief Erases an interval from the set.
@@ -1136,7 +1153,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(interval_to_remove.GetStart() - epsilon);
+            auto it = find_first_candidate(sub_with_floor(interval_to_remove.GetStart(), epsilon));
 
             if (it == m_intervals.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
@@ -1439,7 +1456,7 @@ namespace bslt
         /// @return \c true if the value is contained within epsilon, \c false otherwise.
         [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v, const ValueType epsilon) const noexcept
         {
-            auto it = find_first_candidate(v - epsilon);
+            auto it = find_first_candidate(sub_with_floor(v, epsilon));
             if (it == m_intervals.end())
             {
                 return false;
@@ -1457,13 +1474,11 @@ namespace bslt
             {
                 return true;
             }
-            // Find first interval that ends after other.Start
             auto it = find_first_candidate(other.GetStart());
             if (it == m_intervals.end())
             {
                 return false;
             }
-            // Check if it fully encloses 'other'
             return it->GetStart() <= other.GetStart() && it->GetEnd() >= other.GetEnd();
         }
 
@@ -1479,7 +1494,7 @@ namespace bslt
             {
                 return true;
             }
-            auto it = find_first_candidate(other.GetStart() - epsilon);
+            auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
             if (it == m_intervals.end())
             {
                 return false;
@@ -1520,7 +1535,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = find_first_candidate(other.GetStart() - epsilon);
+            auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
             if (it == m_intervals.end())
             {
                 return false;
@@ -1530,19 +1545,24 @@ namespace bslt
         }
 
     private:
+        static constexpr BASALT_FORCE_INLINE ValueType sub_with_floor(const ValueType lhs, const ValueType rhs) noexcept
+        {
+            if constexpr (std::is_unsigned_v<ValueType>)
+            {
+                return (rhs > lhs) ? ValueType(0) : ValueType(lhs - rhs);
+            }
+            else
+            {
+                return lhs - rhs;
+            }
+        }
+
         /// @brief Finds the first interval `it` such that `it.GetEnd() > v`. (const)
-        ///
-        /// Uses the comparator `A.End <= B.Start`.
-        /// `lower_bound(K)` returns the first `X` such that `comp(X, K)` is false.
-        /// `X.End <= K.Start` is false => `X.End > K.Start`.
-        /// By setting `K.Start` to `v`, we find the first interval where `End > v`.
         ///
         /// @param v The value to search for.
         /// @return A const iterator to the first candidate, or `end()`.
-        BASALT_FORCE_INLINE const_iterator find_first_candidate(ValueType v) const noexcept
+        BASALT_FORCE_INLINE const_iterator find_first_candidate(const ValueType v) const noexcept
         {
-            // We construct a dummy interval [v, v). The End doesn't matter for lower_bound
-            // because the comparator uses the RHS Start.
             return m_intervals.lower_bound(IntervalType(v, v));
         }
 
