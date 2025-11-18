@@ -64,4 +64,16 @@
 #define BASALT_FORCE_INLINE inline
 #endif
 
+#ifdef NDEBUG
+#define BASALT_BUILD_RELEASE 1
+#define BASALT_BUILD_DEBUG 0
+#else
+#define BASALT_BUILD_RELEASE 0
+#define BASALT_BUILD_DEBUG 1
+#endif // NDEBUG
+
+#if BASALT_BUILD_DEBUG + BASALT_BUILD_RELEASE != 1
+#error "Inconsistent build configuration: Both BASALT_BUILD_DEBUG and BASALT_BUILD_RELEASE are set
+#endif // BASALT_BUILD_DEBUG + BASALT_BUILD_RELEASE != 1
+
 #endif // BASALT_BASE_CONFIG_H_

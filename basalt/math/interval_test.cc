@@ -106,6 +106,7 @@ namespace bslt::test
         EXPECT_EQ(interval.GetEnd(), end);
     }
 
+#if BASALT_BUILD_RELEASE
     TYPED_TEST(ClosedOpenIntervalTypedTest, ConstructionSwapsOrder)
     {
         using T = TypeParam;
@@ -116,6 +117,7 @@ namespace bslt::test
         EXPECT_EQ(interval.GetStart(), start);
         EXPECT_EQ(interval.GetEnd(), end);
     }
+#endif
 
     TYPED_TEST(ClosedOpenIntervalTypedTest, IsEmpty)
     {
@@ -422,6 +424,7 @@ namespace bslt::test
         EXPECT_EQ(interval.GetEnd(), end);
     }
 
+#if BASALT_BUILD_RELEASE
     TYPED_TEST(OpenClosedIntervalTypedTest, ConstructionSwapsOrder)
     {
         using T = TypeParam;
@@ -432,6 +435,7 @@ namespace bslt::test
         EXPECT_EQ(interval.GetStart(), start);
         EXPECT_EQ(interval.GetEnd(), end);
     }
+#endif
 
     TYPED_TEST(OpenClosedIntervalTypedTest, IsEmpty)
     {
@@ -738,6 +742,7 @@ namespace bslt::test
         EXPECT_EQ(interval.GetEnd(), end);
     }
 
+#if BASALT_BUILD_RELEASE
     TYPED_TEST(ClosedIntervalTypedTest, ConstructionSwapsOrder)
     {
         using T = TypeParam;
@@ -748,6 +753,7 @@ namespace bslt::test
         EXPECT_EQ(interval.GetStart(), start);
         EXPECT_EQ(interval.GetEnd(), end);
     }
+#endif
 
     TYPED_TEST(ClosedIntervalTypedTest, IsEmpty)
     {
@@ -1063,6 +1069,7 @@ namespace bslt::test
         EXPECT_EQ(interval.GetEnd(), end);
     }
 
+#if BASALT_BUILD_RELEASE
     TYPED_TEST(OpenIntervalTypedTest, ConstructionSwapsOrder)
     {
         using T = TypeParam;
@@ -1073,6 +1080,7 @@ namespace bslt::test
         EXPECT_EQ(interval.GetStart(), start);
         EXPECT_EQ(interval.GetEnd(), end);
     }
+#endif
 
     TYPED_TEST(OpenIntervalTypedTest, IsEmpty)
     {
@@ -1506,12 +1514,14 @@ namespace bslt::test
         const ClosedOpenInterval<T> not_empty(T{0}, T{0.15});
         EXPECT_FALSE(not_empty.IsEmpty(epsilon));
 
+#if BASALT_BUILD_RELEASE
         // ClosedInterval construction forces start <= end.
         // ClosedInterval(0, -0.2) becomes [-0.2, 0].
         // Length is 0.2, which is > 0.1.
         // The class does not support "inverted" intervals via construction.
         const ClosedInterval<T> closed_interval(T{0}, T{-0.2});
         EXPECT_FALSE(closed_interval.IsEmpty(epsilon));
+#endif
     }
 
     TYPED_TEST(EpsilonTypedTest, ContainsValueWithEpsilon)

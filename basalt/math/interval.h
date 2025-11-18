@@ -26,6 +26,7 @@
 #include <optional>
 #include <concepts>
 #include <type_traits>
+#include "absl/log/check.h"
 #include "basalt/base/config.h"
 #include "basalt/type_traits/type_traits.h"
 
@@ -51,6 +52,7 @@ namespace bslt
 
         // Check if the interval is empty
         { interval.IsEmpty() } -> std::same_as<bool>;
+        { interval.IsEmpty(v) } -> std::same_as<bool>;
 
         // The length of the interval
         { interval.Length() } -> std::convertible_to<typename T::ValueType>;
@@ -60,18 +62,23 @@ namespace bslt
 
         // Check if a value is contained within the interval
         { interval.Contains(v) } -> std::same_as<bool>;
+        { interval.Contains(v, v) } -> std::same_as<bool>;
 
         // Check if another interval is contained within this interval
         { interval.ContainsInterval(other) } -> std::same_as<bool>;
+        { interval.ContainsInterval(other, v) } -> std::same_as<bool>;
 
         // Check if this interval intersects with another interval.
         { interval.Intersects(other) } -> std::same_as<bool>;
+        { interval.Intersects(other, v) } -> std::same_as<bool>;
 
         // Check if this interval intersects or is adjacent to another interval.
         { interval.IntersectsOrAdjacent(other) } -> std::same_as<bool>;
+        { interval.IntersectsOrAdjacent(other, v) } -> std::same_as<bool>;
 
         // Check if this interval is adjacent to another interval.
         { interval.Adjacent(other) } -> std::same_as<bool>;
+        { interval.Adjacent(other, v) } -> std::same_as<bool>;
 
         // Calculate the distance to another interval.
         { interval.DistanceTo(other) } -> std::convertible_to<typename T::ValueType>;
@@ -84,6 +91,7 @@ namespace bslt
 
         // Merge this interval with another interval.
         { interval.Merge(other) } -> std::same_as<std::optional<T>>;
+        { interval.Merge(other, v) } -> std::same_as<std::optional<T>>;
 
         // Combine this interval with another interval.
         { interval.Combine(other) } -> std::same_as<T>;
@@ -113,6 +121,7 @@ namespace bslt
             : start_inclusive_(std::min<T>(start_inclusive, end_exclusive)),
               end_exclusive_(std::max<T>(start_inclusive, end_exclusive))
         {
+            DCHECK_LE(start_inclusive, end_exclusive);
         }
 
         /// @brief Gets the inclusive start of the interval.
@@ -615,6 +624,7 @@ namespace bslt
             : start_exclusive_(std::min<T>(start_exclusive, end_inclusive)),
               end_inclusive_(std::max<T>(start_exclusive, end_inclusive))
         {
+            DCHECK_LE(start_exclusive, end_inclusive);
         }
 
         /// @brief Gets the exclusive start of the interval.
@@ -1114,6 +1124,7 @@ namespace bslt
             : start_inclusive_(std::min<T>(start_inclusive, end_inclusive)),
               end_inclusive_(std::max<T>(start_inclusive, end_inclusive))
         {
+            DCHECK_LE(start_inclusive, end_inclusive);
         }
 
         /// @brief Gets the inclusive start of the interval.
@@ -1612,6 +1623,7 @@ namespace bslt
             : start_exclusive_(std::min<T>(start_exclusive, end_exclusive)),
               end_exclusive_(std::max<T>(start_exclusive, end_exclusive))
         {
+            DCHECK_LE(start_exclusive, end_exclusive);
         }
 
         /// @brief Gets the exclusive start of the interval.

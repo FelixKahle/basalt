@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <utility>
 #include <optional>
+#include <type_traits>
 #include "absl/container/btree_set.h"
 #include "basalt/math/interval.h"
 
@@ -93,42 +94,63 @@ namespace bslt
         /// @brief Returns a constant iterator to the beginning of the set.
         ///
         /// @return A const_iterator pointing to the first interval in the set.
-        [[nodiscard]] BASALT_FORCE_INLINE const_iterator begin() const noexcept { return m_intervals.begin(); }
+        [[nodiscard]] BASALT_FORCE_INLINE const_iterator begin() const noexcept
+        {
+            return m_intervals.begin();
+        }
 
         /// @brief Returns a constant iterator to the end of the set.
         ///
         /// @return A const_iterator pointing one past the last interval in the set.
-        [[nodiscard]] BASALT_FORCE_INLINE const_iterator end() const noexcept { return m_intervals.end(); }
+        [[nodiscard]] BASALT_FORCE_INLINE const_iterator end() const noexcept
+        {
+            return m_intervals.end();
+        }
 
         /// @brief Returns a constant iterator to the beginning of the set.
         ///
         /// @return A const_iterator pointing to the first interval in the set.
-        [[nodiscard]] BASALT_FORCE_INLINE const_iterator cbegin() const noexcept { return m_intervals.cbegin(); }
+        [[nodiscard]] BASALT_FORCE_INLINE const_iterator cbegin() const noexcept
+        {
+            return m_intervals.cbegin();
+        }
 
         /// @brief Returns a constant iterator to the end of the set.
         ///
         /// @return A const_iterator pointing one past the last interval in the set.
-        [[nodiscard]] BASALT_FORCE_INLINE const_iterator cend() const noexcept { return m_intervals.cend(); }
+        [[nodiscard]] BASALT_FORCE_INLINE const_iterator cend() const noexcept
+        {
+            return m_intervals.cend();
+        }
 
         /// @brief Checks if the set is empty.
         ///
         /// @return \c true if the set contains no intervals, \c false otherwise.
-        [[nodiscard]] BASALT_FORCE_INLINE bool IsEmpty() const noexcept { return m_intervals.empty(); }
+        [[nodiscard]] BASALT_FORCE_INLINE bool IsEmpty() const noexcept
+        {
+            return m_intervals.empty();
+        }
 
         /// @brief Returns the number of disjoint intervals in the set.
         ///
         /// @return The number of intervals.
-        [[nodiscard]] BASALT_FORCE_INLINE size_type size() const noexcept { return m_intervals.size(); }
+        [[nodiscard]] BASALT_FORCE_INLINE size_type size() const noexcept
+        {
+            return m_intervals.size();
+        }
 
         /// @brief Clears all intervals from the set.
-        BASALT_FORCE_INLINE void clear() noexcept { m_intervals.clear(); }
+        BASALT_FORCE_INLINE void clear() noexcept
+        {
+            m_intervals.clear();
+        }
 
         /// @brief Inserts a new interval into the set.
         ///
         /// The new interval will be merged with any existing intervals it overlaps or is adjacent to.
         ///
         /// @param new_interval The interval `[start, end)` to insert.
-        BASALT_FORCE_INLINE void Insert(IntervalType new_interval)
+        void Insert(IntervalType new_interval)
         {
             if (new_interval.IsEmpty())
             {
@@ -167,7 +189,7 @@ namespace bslt
         ///
         /// @param new_interval The interval to insert.
         /// @param epsilon The tolerance for adjacency and intersection.
-        BASALT_FORCE_INLINE void Insert(IntervalType new_interval, const ValueType epsilon)
+        void Insert(IntervalType new_interval, const ValueType epsilon)
         {
             if (new_interval.IsEmpty(epsilon))
             {
@@ -180,9 +202,14 @@ namespace bslt
 
             while (it != m_intervals.end() && merged_interval.IntersectsOrAdjacent(*it, epsilon))
             {
+                DCHECK(merged_interval.IntersectsOrAdjacent(*it, epsilon)) << "Attempting to merge disjoint intervals";
+
                 merged_interval = merged_interval.Combine(*it);
                 ++it;
             }
+
+            DCHECK_LE(merged_interval.GetStart(), new_interval.GetStart());
+            DCHECK_GE(merged_interval.GetEnd(), new_interval.GetEnd());
 
             if (erase_start != it)
             {
@@ -205,7 +232,7 @@ namespace bslt
         /// intervals in the set, handling shrinking and splitting in-place.
         ///
         /// @param interval_to_remove The interval `[start, end)` to subtract.
-        BASALT_FORCE_INLINE void Erase(IntervalType interval_to_remove)
+        void Erase(IntervalType interval_to_remove)
         {
             if (interval_to_remove.IsEmpty())
             {
@@ -292,7 +319,7 @@ namespace bslt
         ///
         /// @param interval_to_remove The interval to subtract.
         /// @param epsilon The tolerance for checking intersections.
-        BASALT_FORCE_INLINE void Erase(IntervalType interval_to_remove, const ValueType epsilon)
+        void Erase(IntervalType interval_to_remove, const ValueType epsilon)
         {
             if (interval_to_remove.IsEmpty(epsilon))
             {
@@ -375,7 +402,7 @@ namespace bslt
         /// @brief Adds all intervals from another set to this set (set union).
         ///
         /// @param other The other IntervalSet to insert.
-        BASALT_FORCE_INLINE void Insert(const IntervalSet& other)
+        void Insert(const IntervalSet& other)
         {
             if (other.IsEmpty())
             {
@@ -438,7 +465,7 @@ namespace bslt
         /// @brief Subtracts all intervals from another set from this set (set difference).
         ///
         /// @param other The other IntervalSet to subtract.
-        BASALT_FORCE_INLINE void Erase(const IntervalSet& other)
+        void Erase(const IntervalSet& other)
         {
             if (other.IsEmpty() || this->IsEmpty())
             {
@@ -519,7 +546,7 @@ namespace bslt
         /// Modifies this set to contain only the intervals that are present in both sets.
         ///
         /// @param other The other IntervalSet to intersect with.
-        BASALT_FORCE_INLINE void Intersection(const IntervalSet& other)
+        void Intersection(const IntervalSet& other)
         {
             container_type new_intervals;
             new_intervals.reserve(std::min(m_intervals.size(), other.m_intervals.size()));
@@ -558,11 +585,12 @@ namespace bslt
         /// Removes all parts of the set that lie outside the boundary interval.
         ///
         /// @param boundary The interval defining the clipping region.
-        BASALT_FORCE_INLINE void Clip(IntervalType boundary)
+        void Clip(IntervalType boundary)
         {
             if (boundary.IsEmpty())
             {
                 clear();
+                DCHECK(IsEmpty());
                 return;
             }
 
@@ -789,14 +817,21 @@ namespace bslt
         }
 
     private:
+        /// @brief Subtracts rhs from lhs with floor at zero for unsigned types.
+        ///
+        /// @param lhs The left-hand side value.
+        /// @param rhs The right-hand side value.
+        ///
+        /// @return The result of lhs - rhs, floored at zero for unsigned types.
         static constexpr BASALT_FORCE_INLINE ValueType sub_with_floor(const ValueType lhs, const ValueType rhs) noexcept
         {
             if constexpr (std::is_unsigned_v<ValueType>)
             {
-                return rhs > lhs ? ValueType(0) : ValueType(lhs - rhs);
+                return (rhs > lhs) ? ValueType(0) : ValueType(lhs - rhs);
             }
             else
             {
+                // Fast path for signed types.
                 return lhs - rhs;
             }
         }
@@ -851,6 +886,7 @@ namespace bslt
     };
 
     /// @brief An implementation of IntervalSet using `absl::btree_set`.
+    ///
     /// This storage is optimized for frequent insertions and lookups in sets with a large number of disjoint intervals.
     ///
     /// @tparam T The type of the interval's endpoints.
@@ -858,6 +894,15 @@ namespace bslt
         requires std::is_arithmetic_v<T>
     class IntervalSet<T, IntervalSetStorage::kBTree>
     {
+        // Unlike a standard set, this class maintains a strictly disjoint and non-adjacent state.
+        // The internal `absl::btree_set` uses a specialized comparator that treats adjacent intervals
+        // as equal. Therefore, all mutation methods (`Insert`, `Erase`) strictly enforce that
+        // overlapping or adjacent intervals are merged or split before interacting with the
+        // underlying BTree structure.
+        //
+        // Breaking this invariant (e.g., by forcing two adjacent intervals into the underlying container)
+        // will corrupt the tree's search capabilities.
+
     public:
         /// @brief The underlying type of the interval endpoints.
         using ValueType = T;
@@ -869,12 +914,25 @@ namespace bslt
         /// Defines ordering `a < b` if `a.End <= b.Start`.
         struct ClosedOpenIntervalComparer
         {
-            /// @brief Compares two intervals for strict partial ordering.
+            /// @brief Custom comparer for storing disjoint intervals in the BTree.
+            ///
+            /// @note **CRITICAL INVARIANT**: This comparator relies on the set strictly containing
+            /// disjoint and non-adjacent intervals.
+            ///
+            /// This defines a strict partial ordering where `a < b` if `a` is strictly to the left of `b`.
+            /// - `[0, 1) < [2, 3)` is TRUE.
+            /// - `[0, 1) < [1, 2)` is FALSE (Adjacent).
+            /// - `[1, 2) < [0, 1)` is FALSE.
+            ///
+            /// Consequently, the BTree considers adjacent or overlapping intervals to be **EQUAL**.
+            /// This is safe ONLY because `IntervalSet` guarantees that adjacent intervals are
+            /// merged *before* they are inserted into the tree.
             ///
             /// @param a The left-hand side interval.
             /// @param b The right-hand side interval.
             /// @return \c true if `a` comes strictly before `b`.
-            BASALT_FORCE_INLINE bool operator()(const IntervalType& a, const IntervalType& b) const noexcept
+            constexpr BASALT_FORCE_INLINE bool operator()(const IntervalType& a,
+                                                          const IntervalType& b) const noexcept
             {
                 return a.GetEnd() < b.GetStart();
             }
@@ -963,7 +1021,7 @@ namespace bslt
         /// The new interval will be merged with any existing intervals it overlaps or is adjacent to.
         ///
         /// @param new_interval The interval `[start, end)` to insert.
-        BASALT_FORCE_INLINE void Insert(IntervalType new_interval)
+        void Insert(IntervalType new_interval)
         {
             if (new_interval.IsEmpty())
             {
@@ -994,7 +1052,7 @@ namespace bslt
         ///
         /// @param new_interval The interval to insert.
         /// @param epsilon The tolerance for adjacency and intersection.
-        BASALT_FORCE_INLINE void Insert(IntervalType new_interval, const ValueType epsilon)
+        void Insert(IntervalType new_interval, const ValueType epsilon)
         {
             if (new_interval.IsEmpty(epsilon))
             {
@@ -1009,9 +1067,14 @@ namespace bslt
             // Merge based on epsilon connectivity
             while (it != m_intervals.end() && merged_interval.IntersectsOrAdjacent(*it, epsilon))
             {
+                DCHECK(merged_interval.IntersectsOrAdjacent(*it, epsilon)) << "Attempting to merge disjoint intervals";
+
                 merged_interval = merged_interval.Combine(*it);
                 ++it;
             }
+
+            DCHECK_LE(merged_interval.GetStart(), new_interval.GetStart());
+            DCHECK_GE(merged_interval.GetEnd(), new_interval.GetEnd());
 
             if (erase_start != it)
             {
@@ -1024,7 +1087,7 @@ namespace bslt
         /// @brief Adds all intervals from another set to this set (set union).
         ///
         /// @param other The other IntervalSet to insert.
-        BASALT_FORCE_INLINE void Insert(const IntervalSet& other)
+        void Insert(const IntervalSet& other)
         {
             if (other.IsEmpty())
             {
@@ -1091,7 +1154,7 @@ namespace bslt
         /// intervals in the set, handling shrinking and splitting in-place.
         ///
         /// @param interval_to_remove The interval `[start, end)` to subtract.
-        BASALT_FORCE_INLINE void Erase(IntervalType interval_to_remove)
+        void Erase(IntervalType interval_to_remove)
         {
             if (interval_to_remove.IsEmpty())
             {
@@ -1111,6 +1174,9 @@ namespace bslt
             if (it->GetStart() < interval_to_remove.GetStart())
             {
                 first_frag = IntervalType(it->GetStart(), interval_to_remove.GetStart());
+
+                DCHECK_LT(first_frag->GetEnd(), it->GetEnd());
+                DCHECK(!first_frag->IsEmpty());
             }
 
             auto erase_end = it;
@@ -1146,7 +1212,7 @@ namespace bslt
         ///
         /// @param interval_to_remove The interval to subtract.
         /// @param epsilon The tolerance for checking intersections.
-        BASALT_FORCE_INLINE void Erase(IntervalType interval_to_remove, const ValueType epsilon)
+        void Erase(IntervalType interval_to_remove, const ValueType epsilon)
         {
             if (interval_to_remove.IsEmpty(epsilon))
             {
@@ -1197,7 +1263,7 @@ namespace bslt
         /// @brief Subtracts all intervals from another set from this set (set difference).
         ///
         /// @param other The other IntervalSet to subtract.
-        BASALT_FORCE_INLINE void Erase(const IntervalSet& other)
+        void Erase(const IntervalSet& other)
         {
             if (other.IsEmpty() || this->IsEmpty())
             {
@@ -1276,7 +1342,7 @@ namespace bslt
         /// Modifies this set to contain only the intervals that are present in both sets.
         ///
         /// @param other The other IntervalSet to intersect with.
-        BASALT_FORCE_INLINE void Intersection(const IntervalSet& other)
+        void Intersection(const IntervalSet& other)
         {
             container_type new_intervals;
 
@@ -1325,11 +1391,12 @@ namespace bslt
         /// Removes all parts of the set that lie outside the boundary interval.
         ///
         /// @param boundary The interval defining the clipping region.
-        BASALT_FORCE_INLINE void Clip(IntervalType boundary)
+        void Clip(IntervalType boundary)
         {
             if (boundary.IsEmpty())
             {
                 clear();
+                DCHECK(IsEmpty());
                 return;
             }
 
@@ -1545,6 +1612,12 @@ namespace bslt
         }
 
     private:
+        /// @brief Subtracts rhs from lhs with floor at zero for unsigned types.
+        ///
+        /// @param lhs The left-hand side value.
+        /// @param rhs The right-hand side value.
+        ///
+        /// @return The result of lhs - rhs, floored at zero for unsigned types.
         static constexpr BASALT_FORCE_INLINE ValueType sub_with_floor(const ValueType lhs, const ValueType rhs) noexcept
         {
             if constexpr (std::is_unsigned_v<ValueType>)
@@ -1553,6 +1626,7 @@ namespace bslt
             }
             else
             {
+                // Fast path for signed types.
                 return lhs - rhs;
             }
         }
