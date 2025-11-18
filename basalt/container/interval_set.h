@@ -1015,7 +1015,7 @@ namespace bslt
 
             if (erase_start != it)
             {
-                m_intervals.erase(erase_start, it);
+                it = m_intervals.erase(erase_start, it);
             }
 
             m_intervals.insert(it, merged_interval);
@@ -1131,7 +1131,7 @@ namespace bslt
             if (first_frag.has_value())
             {
                 hint = m_intervals.insert(hint, *first_frag);
-                hint++;
+                ++hint;
             }
             if (last_frag.has_value())
             {
@@ -1186,7 +1186,7 @@ namespace bslt
             if (first_frag.has_value())
             {
                 hint = m_intervals.insert(hint, *first_frag);
-                hint++;
+                ++hint;
             }
             if (last_frag.has_value())
             {
