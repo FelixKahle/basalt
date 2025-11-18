@@ -65,40 +65,27 @@ namespace bslt
         { interval.ContainsInterval(other) } -> std::same_as<bool>;
 
         // Check if this interval intersects with another interval.
-        // Intersection is defined as having at least one point in common.
         { interval.Intersects(other) } -> std::same_as<bool>;
 
         // Check if this interval intersects or is adjacent to another interval.
-        // This includes overlapping and adjacent cases.
         { interval.IntersectsOrAdjacent(other) } -> std::same_as<bool>;
 
         // Check if this interval is adjacent to another interval.
-        // Adjacency is defined as being next to each other without overlapping.
         { interval.Adjacent(other) } -> std::same_as<bool>;
 
         // Calculate the distance to another interval.
-        // The distance is defined as the minimum distance between the two intervals.
         { interval.DistanceTo(other) } -> std::convertible_to<typename T::ValueType>;
 
         // Get the intersection of this interval with another interval.
-        // Returns an optional interval representing the intersection,
-        // or std::nullopt if there is no
         { interval.Intersection(other) } -> std::same_as<std::optional<T>>;
 
         // Clamp this interval to another interval.
-        // Returns an optional interval representing the clamped interval,
-        // or std::nullopt if there is no overlap.
         { interval.Clamp(other) } -> std::same_as<std::optional<T>>;
 
         // Merge this interval with another interval.
-        // Returns an optional interval representing the merged interval,
-        // or std::nullopt if they cannot be merged because they are not
-        // overlapping or touching.
         { interval.Merge(other) } -> std::same_as<std::optional<T>>;
 
         // Combine this interval with another interval.
-        // Returns a new interval that encompasses both intervals,
-        // consuming also space that is between them.
         { interval.Combine(other) } -> std::same_as<T>;
     };
 
@@ -113,16 +100,12 @@ namespace bslt
     class ClosedOpenInterval
     {
     public:
-        /// @brief Type alias for the value type of the interval.
-        ///
-        /// This type alias is used to refer to the type of the interval's endpoints.
         using ValueType = T;
 
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
-        ///
-        /// @note The constructor ensures that the start value is always less than or equal to the end value.
+        /// It automatically sorts the values so that the start is the minimum and the end is the maximum.
         ///
         /// @param start_inclusive The inclusive start of the interval.
         /// @param end_exclusive The exclusive end of the interval.
@@ -134,9 +117,9 @@ namespace bslt
 
         /// @brief Gets the inclusive start of the interval.
         ///
-        /// This method returns the inclusive start of the interval.
+        /// This method returns the lower bound of the interval, which is included in the set.
         ///
-        /// @return The inclusive start of the interval.
+        /// @return The inclusive start value.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T GetStart() const noexcept
         {
             return start_inclusive_;
@@ -144,9 +127,9 @@ namespace bslt
 
         /// @brief Gets the exclusive end of the interval.
         ///
-        /// This method returns the exclusive end of the interval.
+        /// This method returns the upper bound of the interval, which is excluded from the set.
         ///
-        /// @return The exclusive end of the interval.
+        /// @return The exclusive end value.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T GetEnd() const noexcept
         {
             return end_exclusive_;
@@ -154,11 +137,12 @@ namespace bslt
 
         /// @brief Computes the midpoint of the interval.
         ///
-        /// This method calculates the midpoint of the interval, which is the average of the start and end values.
+        /// This method calculates the arithmetic mean of the start and end values.
+        /// For floating point types, it returns the exact center. For integer types, it truncates towards zero.
         ///
-        /// @tparam ReturnValueType The type of the return value. Defaults to the type of the interval's endpoints.
+        /// @tparam ReturnValueType The type of the returned midpoint. Defaults to T.
         ///
-        /// @return The midpoint of the interval as an arithmetic type.
+        /// @return The midpoint of the interval.
         template <typename ReturnValueType = T>
             requires std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE ReturnValueType Midpoint() const noexcept
@@ -168,14 +152,14 @@ namespace bslt
                 return (static_cast<ReturnValueType>(start_inclusive_)
                     + static_cast<ReturnValueType>(end_exclusive_)) / ReturnValueType{2};
             }
-
             return static_cast<ReturnValueType>(start_inclusive_) +
                 static_cast<ReturnValueType>(end_exclusive_ - start_inclusive_) / ReturnValueType{2};
         }
 
         /// @brief Checks if the interval is empty.
         ///
-        /// This method checks if the interval has no length, which occurs when the start and end values are equal.
+        /// This method checks if the interval contains no points.
+        /// For a closed-open interval [a, b), it is empty if a == b.
         ///
         /// @return \c true if the interval is empty, \c false otherwise.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IsEmpty() const noexcept
@@ -183,11 +167,23 @@ namespace bslt
             return start_inclusive_ == end_exclusive_;
         }
 
+        /// @brief Checks if the interval is empty using a tolerance epsilon.
+        ///
+        /// This method checks if the length of the interval is less than or equal to the given epsilon.
+        ///
+        /// @param epsilon The tolerance value for checking emptiness.
+        ///
+        /// @return \c true if the interval length is <= epsilon, \c false otherwise.
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IsEmpty(const T epsilon) const noexcept
+        {
+            return (end_exclusive_ - start_inclusive_) <= epsilon;
+        }
+
         /// @brief Gets the length of the interval.
         ///
-        /// This method calculates the length of the interval, which is the difference between the end and start values.
+        /// This method calculates the difference between the end and start values.
         ///
-        /// @return The length of the interval as an arithmetic type.
+        /// @return The length of the interval.
         [[nodiscard]] constexpr T Length() const noexcept
         {
             return end_exclusive_ - start_inclusive_;
@@ -195,12 +191,12 @@ namespace bslt
 
         /// @brief Checks if the interval contains the given value.
         ///
-        /// This method checks if the specified value is within the interval, including the start but excluding the end.
+        /// This method checks if the value is within [start, end).
         ///
-        /// @tparam OtherType The type of the value to check. Must be convertible to the interval's type.
-        /// @param value The value to check for containment in the interval.
+        /// @tparam OtherType The type of the value to check.
+        /// @param value The value to check.
         ///
-        /// @return \c true if the value is within the interval, \c false otherwise.
+        /// @return \c true if the value is contained, \c false otherwise.
         template <typename OtherType>
             requires std::convertible_to<OtherType, T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Contains(OtherType value) const noexcept
@@ -208,16 +204,30 @@ namespace bslt
             return value >= start_inclusive_ && value < end_exclusive_;
         }
 
-        /// @brief Checks if the interval contains another interval.
+        /// @brief Checks if the interval contains the given value with tolerance.
         ///
-        /// This method checks if the current interval fully contains another interval,
-        /// meaning the start of the other interval is greater than or equal to the start of this interval,
-        /// and the end of the other interval is less than or equal to the end of this interval.
+        /// This method checks if the value is within [start - epsilon, end + epsilon).
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param other The other interval to check for containment.
+        /// @tparam OtherType The type of the value to check.
+        /// @param value The value to check.
+        /// @param epsilon The tolerance buffer to expand the interval boundaries.
         ///
-        /// @return \c true if the current interval contains the other interval, \c false otherwise.
+        /// @return \c true if the value is contained within the expanded interval, \c false otherwise.
+        template <typename OtherType>
+            requires std::convertible_to<OtherType, T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Contains(OtherType value, const T epsilon) const noexcept
+        {
+            return value >= (start_inclusive_ - epsilon) && value < (end_exclusive_ + epsilon);
+        }
+
+        /// @brief Checks if the interval fully contains another interval.
+        ///
+        /// This method checks if the other interval is a subset of this interval.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        ///
+        /// @return \c true if this interval contains the other interval, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(
@@ -226,13 +236,30 @@ namespace bslt
             return other.start_inclusive_ >= start_inclusive_ && other.end_exclusive_ <= end_exclusive_;
         }
 
+        /// @brief Checks if the interval fully contains another interval with tolerance.
+        ///
+        /// This method checks if the other interval is a subset of this interval, expanded by epsilon.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value used to expand this interval's boundaries.
+        ///
+        /// @return \c true if this interval (expanded) contains the other interval, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(const ClosedOpenInterval<OtherType> other,
+                                                                          const T epsilon) const noexcept
+        {
+            return other.start_inclusive_ >= (start_inclusive_ - epsilon) &&
+                other.end_exclusive_ <= (end_exclusive_ + epsilon);
+        }
+
         /// @brief Checks if the current interval intersects with another interval.
         ///
-        /// This method checks if the current interval overlaps with another interval,
-        /// meaning there is at least one point that is contained in both intervals.
+        /// This method determines if there is any overlap between the two intervals.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param other The other interval to check for intersection.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
         ///
         /// @return \c true if the intervals intersect, \c false otherwise.
         template <typename OtherType>
@@ -244,13 +271,30 @@ namespace bslt
                 std::min(end_exclusive_, static_cast<T>(other.GetEnd()));
         }
 
-        /// @brief Checks if this interval is adjacent to another interval.
+        /// @brief Checks if the current interval intersects with another interval with tolerance.
         ///
-        /// Adjacency is defined as being next to each other without overlapping.
-        /// This is synonymous with \c Touches for \c ClosedOpenInterval.
+        /// This method determines if there is any overlap between the two intervals, allowing for a fuzzy intersection.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @param other The other interval to check for adjacency.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals intersect within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Intersects(const ClosedOpenInterval<OtherType> other,
+                                                                    const T epsilon) const noexcept
+        {
+            return std::max(start_inclusive_, static_cast<T>(other.GetStart())) <
+                std::min(end_exclusive_, static_cast<T>(other.GetEnd())) + epsilon;
+        }
+
+        /// @brief Checks if this interval is adjacent to another interval.
+        ///
+        /// Adjacency implies the intervals touch exactly at an endpoint but do not strictly overlap.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
         ///
         /// @return \c true if the intervals are adjacent, \c false otherwise.
         template <typename OtherType>
@@ -263,9 +307,37 @@ namespace bslt
             return end_exclusive_ == other_start || start_inclusive_ == other_end;
         }
 
+        /// @brief Checks if this interval is adjacent to another interval with tolerance.
+        ///
+        /// This checks if the endpoints of the two intervals are within epsilon of each other.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals are adjacent within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Adjacent(const ClosedOpenInterval<OtherType> other,
+                                                                  const T epsilon) const noexcept
+        {
+            const T other_start = static_cast<T>(other.GetStart());
+            const T other_end = static_cast<T>(other.GetEnd());
+
+            // We use max-min here to safely handle unsigned types where abs() might differ
+            auto diff1 = (end_exclusive_ > other_start)
+                             ? (end_exclusive_ - other_start)
+                             : (other_start - end_exclusive_);
+            auto diff2 = (start_inclusive_ > other_end)
+                             ? (start_inclusive_ - other_end)
+                             : (other_end - start_inclusive_);
+
+            return diff1 <= epsilon || diff2 <= epsilon;
+        }
+
         /// @brief Checks if this interval intersects or touches another interval.
         ///
-        /// This checks if the two intervals are not disjoint.
+        /// This checks if the two intervals are connected (non-disjoint).
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
         /// @param other The other interval to check.
@@ -281,15 +353,34 @@ namespace bslt
             return end_exclusive_ >= other_start && other_end >= start_inclusive_;
         }
 
+        /// @brief Checks if this interval intersects or touches another interval with tolerance.
+        ///
+        /// This checks if the two intervals are connected within an epsilon tolerance.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals intersect or are adjacent within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IntersectsOrAdjacent(
+            const ClosedOpenInterval<OtherType> other, const T epsilon) const noexcept
+        {
+            const T other_start = static_cast<T>(other.GetStart());
+            const T other_end = static_cast<T>(other.GetEnd());
+            return end_exclusive_ >= (other_start - epsilon) && other_end >= (start_inclusive_ - epsilon);
+        }
+
         /// @brief Calculate the distance to another interval.
         ///
-        /// The distance is defined as the minimum distance between the two
-        /// intervals. If the intervals intersect or touch, the distance is 0.
+        /// The distance is defined as the minimum distance between the two intervals.
+        /// If the intervals intersect or touch, the distance is 0.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
         /// @param other The other interval to calculate the distance to.
         ///
-        /// @return The distance to the other interval.
+        /// @return The distance value.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T DistanceTo(
@@ -302,7 +393,6 @@ namespace bslt
             {
                 return T{0};
             }
-
             if (end_exclusive_ < other_start)
             {
                 return other_start - end_exclusive_;
@@ -312,14 +402,14 @@ namespace bslt
 
         /// @brief Merges this interval with another interval.
         ///
-        /// Returns an optional interval representing the merged interval,
-        /// or std::nullopt if they cannot be merged because they are not
-        /// overlapping or touching.
+        /// Creates a new interval spanning the minimum start and maximum end of both intervals,
+        /// but only if they intersect or are adjacent.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @tparam ReturnValueType The type of the resulting interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to merge with.
-        /// @return An optional containing the merged interval, or std::nullopt.
+        ///
+        /// @return An optional containing the merged interval, or std::nullopt if they are disjoint.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<ClosedOpenInterval<ReturnValueType>> Merge(
@@ -329,24 +419,50 @@ namespace bslt
             {
                 return std::nullopt;
             }
-
             const ReturnValueType start = std::min(static_cast<ReturnValueType>(start_inclusive_),
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_exclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
+            return ClosedOpenInterval<ReturnValueType>(start, end);
+        }
 
+        /// @brief Merges this interval with another interval using tolerance to bridge gaps.
+        ///
+        /// Creates a new interval spanning the minimum start and maximum end of both intervals,
+        /// provided they are connected within the given epsilon.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
+        /// @param other The other interval.
+        /// @param epsilon The tolerance value used to determine connectivity.
+        ///
+        /// @return An optional containing the merged interval, or std::nullopt if they are disjoint beyond epsilon.
+        template <typename OtherType, typename ReturnValueType = T>
+            requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<ClosedOpenInterval<ReturnValueType>> Merge(
+            const ClosedOpenInterval<OtherType> other, const T epsilon) const noexcept
+        {
+            if (!IntersectsOrAdjacent(other, epsilon))
+            {
+                return std::nullopt;
+            }
+            const ReturnValueType start = std::min(static_cast<ReturnValueType>(start_inclusive_),
+                                                   static_cast<ReturnValueType>(other.GetStart()));
+            const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_exclusive_),
+                                                 static_cast<ReturnValueType>(other.GetEnd()));
             return ClosedOpenInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Combines this interval with another interval.
         ///
-        /// Returns a new interval that encompasses both intervals,
-        /// including any space that is between them if they are disjoint.
+        /// Returns a new interval that encompasses both intervals (the bounding box),
+        /// regardless of whether they intersect or not.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @tparam ReturnValueType The type of the resulting interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to combine with.
-        /// @return A new interval that represents the "bounding box" of both.
+        ///
+        /// @return A new interval representing the bounding range of both inputs.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE ClosedOpenInterval<ReturnValueType> Combine(
@@ -356,21 +472,18 @@ namespace bslt
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_exclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
-
             return ClosedOpenInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Computes the intersection of the current interval with another interval.
         ///
-        /// This method calculates the overlapping part of the current interval and another interval.
-        /// If there is no intersection, it returns an empty optional.
+        /// This method returns the interval representing the overlapping region.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @tparam ReturnValueType The type of the return value. Defaults to the type of the interval's endpoints.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to compute the intersection with.
         ///
-        /// @return An optional containing the intersection interval if it exists,
-        /// or an empty optional if there is no intersection.
+        /// @return An optional containing the intersection interval, or std::nullopt if they do not intersect.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<ClosedOpenInterval<ReturnValueType>> Intersection(
@@ -380,23 +493,21 @@ namespace bslt
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::min(static_cast<ReturnValueType>(end_exclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
-
             if (start >= end)
             {
                 return std::nullopt;
             }
-
             return ClosedOpenInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Clamps the current interval to fit within another interval.
         ///
-        /// This method restricts the current interval to the boundaries defined by another interval.
-        /// If the current interval does not overlap with the boundary interval, it returns an empty optional.
+        /// This restricts the start and end of the current interval to not exceed the boundaries of the provided interval.
         ///
-        /// @tparam OtherType The type of the boundary interval's endpoints. Must be an arithmetic type.
+        /// @tparam OtherType The type of the boundary interval's endpoints.
+        /// @param boundary The interval defining the valid range.
         ///
-        /// @return An optional \c std::optional containing the clamped interval if it exists,
+        /// @return An optional containing the clamped interval, or std::nullopt if the result would be empty.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<ClosedOpenInterval<T>> Clamp(
@@ -404,24 +515,22 @@ namespace bslt
         {
             const T clamped_start = std::max(start_inclusive_, static_cast<T>(boundary.GetStart()));
             const T clamped_end = std::min(end_exclusive_, static_cast<T>(boundary.GetEnd()));
-
             if (clamped_start >= clamped_end)
             {
                 return std::nullopt;
             }
-
             return ClosedOpenInterval(clamped_start, clamped_end);
         }
 
         /// @brief Compares two intervals for equality.
         ///
-        /// This method checks if the start and end values of two intervals are equal.
+        /// Checks if the start and end points are exactly equal.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param lhs The left-hand side interval to compare.
-        /// @param rhs The other interval to compare with.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param lhs The left-hand side interval.
+        /// @param rhs The right-hand side interval.
         ///
-        /// @return \c true if the intervals are equal, \c false otherwise.
+        /// @return \c true if intervals are equal, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<OtherType>
         friend constexpr BASALT_FORCE_INLINE bool operator==(const ClosedOpenInterval lhs,
@@ -432,13 +541,13 @@ namespace bslt
 
         /// @brief Compares two intervals for inequality.
         ///
-        /// This method checks if two intervals are not equal by negating the result of the equality operator.
+        /// Checks if the start or end points differ.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param lhs The left-hand side interval to compare.
-        /// @param rhs The other interval to compare with.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param lhs The left-hand side interval.
+        /// @param rhs The right-hand side interval.
         ///
-        /// @return \c true if the intervals are not equal, \c false otherwise.
+        /// @return \c true if intervals are not equal, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<OtherType>
         friend constexpr BASALT_FORCE_INLINE bool operator!=(const ClosedOpenInterval lhs,
@@ -447,15 +556,15 @@ namespace bslt
             return !(lhs == rhs);
         }
 
-        /// @brief Absl hash function for the \c Interval class.
+        /// @brief Computes the hash value for the interval.
         ///
-        /// This function computes a hash value for the interval by combining the hashes of its start and end values.
+        /// This function is compatible with the Abseil hashing framework.
         ///
-        /// @tparam H The hash type used by Absl.
-        /// @param h The initial hash value.
-        /// @param interval The interval for which to compute the hash.
+        /// @tparam H The hasher type.
+        /// @param h The hasher state.
+        /// @param interval The interval to hash.
         ///
-        /// @return The combined hash value.
+        /// @return The updated hasher state.
         template <typename H>
             requires AbslHasher<H>
         friend constexpr BASALT_FORCE_INLINE H AbslHashValue(H h, const ClosedOpenInterval interval) noexcept
@@ -463,14 +572,13 @@ namespace bslt
             return H::combine(std::move(h), interval.GetStart(), interval.GetEnd());
         }
 
-        /// @brief Formats the interval as a string using Absl's formatting.
+        /// @brief formats the interval for logging or debugging.
         ///
-        /// This function formats the interval in the form
-        /// "[start, end)" where "start" is inclusive and "end" is exclusive.
+        /// Formats the interval as "[start, end)".
         ///
-        /// @tparam Sink The type of the sink used for formatting.
-        /// @param sink The sink to which the formatted string will be written.
-        /// @param interval The interval to format.
+        /// @tparam Sink The sink type.
+        /// @param sink The sink to write to.
+        /// @param interval The interval to stringify.
         template <typename Sink>
             requires AbslStringifySink<Sink>
         friend BASALT_FORCE_INLINE void AbslStringify(Sink& sink, const ClosedOpenInterval interval) noexcept
@@ -494,16 +602,12 @@ namespace bslt
     class OpenClosedInterval
     {
     public:
-        /// @brief Type alias for the value type of the interval.
-        ///
-        /// This type alias is used to refer to the type of the interval's endpoints.
         using ValueType = T;
 
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
-        ///
-        /// @note The constructor ensures that the start value is always less than or equal to the end value.
+        /// It automatically sorts the values so that the start is the minimum and the end is the maximum.
         ///
         /// @param start_exclusive The exclusive start of the interval.
         /// @param end_inclusive The inclusive end of the interval.
@@ -515,9 +619,9 @@ namespace bslt
 
         /// @brief Gets the exclusive start of the interval.
         ///
-        /// This method returns the exclusive start of the interval.
+        /// This method returns the lower bound of the interval, which is excluded from the set.
         ///
-        /// @return The exclusive start of the interval.
+        /// @return The exclusive start value.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T GetStart() const noexcept
         {
             return start_exclusive_;
@@ -525,9 +629,9 @@ namespace bslt
 
         /// @brief Gets the inclusive end of the interval.
         ///
-        /// This method returns the inclusive end of the interval.
+        /// This method returns the upper bound of the interval, which is included in the set.
         ///
-        /// @return The inclusive end of the interval.
+        /// @return The inclusive end value.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T GetEnd() const noexcept
         {
             return end_inclusive_;
@@ -535,11 +639,12 @@ namespace bslt
 
         /// @brief Computes the midpoint of the interval.
         ///
-        /// This method calculates the midpoint of the interval, which is the average of the start and end values.
+        /// This method calculates the arithmetic mean of the start and end values.
+        /// For floating point types, it returns the exact center. For integer types, it truncates towards zero.
         ///
-        /// @tparam ReturnValueType The type of the return value. Defaults to the type of the interval's endpoints.
+        /// @tparam ReturnValueType The type of the returned midpoint. Defaults to T.
         ///
-        /// @return The midpoint of the interval as an arithmetic type.
+        /// @return The midpoint of the interval.
         template <typename ReturnValueType = T>
             requires std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE ReturnValueType Midpoint() const noexcept
@@ -549,14 +654,14 @@ namespace bslt
                 return (static_cast<ReturnValueType>(start_exclusive_)
                     + static_cast<ReturnValueType>(end_inclusive_)) / ReturnValueType{2};
             }
-
             return static_cast<ReturnValueType>(start_exclusive_) +
                 static_cast<ReturnValueType>(end_inclusive_ - start_exclusive_) / ReturnValueType{2};
         }
 
         /// @brief Checks if the interval is empty.
         ///
-        /// This method checks if the interval is empty, which occurs when the start value is greater than or equal to the end value.
+        /// This method checks if the interval contains no points.
+        /// For an open-closed interval (a, b], it is empty if a >= b.
         ///
         /// @return \c true if the interval is empty, \c false otherwise.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IsEmpty() const noexcept
@@ -564,11 +669,23 @@ namespace bslt
             return start_exclusive_ >= end_inclusive_;
         }
 
+        /// @brief Checks if the interval is empty using a tolerance epsilon.
+        ///
+        /// This method checks if the length of the interval is less than or equal to the given epsilon.
+        ///
+        /// @param epsilon The tolerance value for checking emptiness.
+        ///
+        /// @return \c true if the interval length is <= epsilon, \c false otherwise.
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IsEmpty(const T epsilon) const noexcept
+        {
+            return (end_inclusive_ - start_exclusive_) <= epsilon;
+        }
+
         /// @brief Gets the length of the interval.
         ///
-        /// This method calculates the length of the interval, which is the difference between the end and start values.
+        /// This method calculates the difference between the end and start values.
         ///
-        /// @return The length of the interval as an arithmetic type.
+        /// @return The length of the interval.
         [[nodiscard]] constexpr T Length() const noexcept
         {
             return end_inclusive_ - start_exclusive_;
@@ -576,12 +693,12 @@ namespace bslt
 
         /// @brief Checks if the interval contains the given value.
         ///
-        /// This method checks if the specified value is within the interval, excluding the start but including the end.
+        /// This method checks if the value is within (start, end].
         ///
-        /// @tparam OtherType The type of the value to check. Must be convertible to the interval's type.
-        /// @param value The value to check for containment in the interval.
+        /// @tparam OtherType The type of the value to check.
+        /// @param value The value to check.
         ///
-        /// @return \c true if the value is within the interval, \c false otherwise.
+        /// @return \c true if the value is contained, \c false otherwise.
         template <typename OtherType>
             requires std::convertible_to<OtherType, T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Contains(OtherType value) const noexcept
@@ -589,14 +706,30 @@ namespace bslt
             return value > start_exclusive_ && value <= end_inclusive_;
         }
 
-        /// @brief Checks if the interval contains another interval.
+        /// @brief Checks if the interval contains the given value with tolerance.
         ///
-        /// This method checks if the current interval fully contains another interval.
+        /// This method checks if the value is within (start - epsilon, end + epsilon].
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param other The other interval to check for containment.
+        /// @tparam OtherType The type of the value to check.
+        /// @param value The value to check.
+        /// @param epsilon The tolerance buffer to expand the interval boundaries.
         ///
-        /// @return \c true if the current interval contains the other interval, \c false otherwise.
+        /// @return \c true if the value is contained within the expanded interval, \c false otherwise.
+        template <typename OtherType>
+            requires std::convertible_to<OtherType, T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Contains(OtherType value, const T epsilon) const noexcept
+        {
+            return value > (start_exclusive_ - epsilon) && value <= (end_inclusive_ + epsilon);
+        }
+
+        /// @brief Checks if the interval fully contains another interval.
+        ///
+        /// This method checks if the other interval is a subset of this interval.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        ///
+        /// @return \c true if this interval contains the other interval, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(
@@ -605,12 +738,30 @@ namespace bslt
             return other.start_exclusive_ >= start_exclusive_ && other.end_inclusive_ <= end_inclusive_;
         }
 
+        /// @brief Checks if the interval fully contains another interval with tolerance.
+        ///
+        /// This method checks if the other interval is a subset of this interval, expanded by epsilon.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value used to expand this interval's boundaries.
+        ///
+        /// @return \c true if this interval (expanded) contains the other interval, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(const OpenClosedInterval<OtherType> other,
+                                                                          const T epsilon) const noexcept
+        {
+            return other.start_exclusive_ >= (start_exclusive_ - epsilon) &&
+                other.end_inclusive_ <= (end_inclusive_ + epsilon);
+        }
+
         /// @brief Checks if the current interval intersects with another interval.
         ///
-        /// This method checks if the current interval overlaps with another interval.
+        /// This method determines if there is any overlap between the two intervals.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param other The other interval to check for intersection.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
         ///
         /// @return \c true if the intervals intersect, \c false otherwise.
         template <typename OtherType>
@@ -622,12 +773,30 @@ namespace bslt
                 std::min(end_inclusive_, static_cast<T>(other.GetEnd()));
         }
 
-        /// @brief Checks if this interval is adjacent to another interval.
+        /// @brief Checks if the current interval intersects with another interval with tolerance.
         ///
-        /// Adjacency is defined as being next to each other without overlapping.
+        /// This method determines if there is any overlap between the two intervals, allowing for a fuzzy intersection.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @param other The other interval to check for adjacency.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals intersect within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Intersects(const OpenClosedInterval<OtherType> other,
+                                                                    const T epsilon) const noexcept
+        {
+            return std::max(start_exclusive_, static_cast<T>(other.GetStart())) <
+                std::min(end_inclusive_, static_cast<T>(other.GetEnd())) + epsilon;
+        }
+
+        /// @brief Checks if this interval is adjacent to another interval.
+        ///
+        /// Adjacency implies the intervals touch exactly at an endpoint but do not strictly overlap.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
         ///
         /// @return \c true if the intervals are adjacent, \c false otherwise.
         template <typename OtherType>
@@ -640,9 +809,36 @@ namespace bslt
             return end_inclusive_ == other_start || start_exclusive_ == other_end;
         }
 
+        /// @brief Checks if this interval is adjacent to another interval with tolerance.
+        ///
+        /// This checks if the endpoints of the two intervals are within epsilon of each other.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals are adjacent within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Adjacent(const OpenClosedInterval<OtherType> other,
+                                                                  const T epsilon) const noexcept
+        {
+            const T other_start = static_cast<T>(other.GetStart());
+            const T other_end = static_cast<T>(other.GetEnd());
+
+            auto diff1 = (end_inclusive_ > other_start)
+                             ? (end_inclusive_ - other_start)
+                             : (other_start - end_inclusive_);
+            auto diff2 = (start_exclusive_ > other_end)
+                             ? (start_exclusive_ - other_end)
+                             : (other_end - start_exclusive_);
+
+            return diff1 <= epsilon || diff2 <= epsilon;
+        }
+
         /// @brief Checks if this interval intersects or touches another interval.
         ///
-        /// This checks if the two intervals are not disjoint.
+        /// This checks if the two intervals are connected (non-disjoint).
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
         /// @param other The other interval to check.
@@ -658,15 +854,34 @@ namespace bslt
             return end_inclusive_ >= other_start && other_end >= start_exclusive_;
         }
 
+        /// @brief Checks if this interval intersects or touches another interval with tolerance.
+        ///
+        /// This checks if the two intervals are connected within an epsilon tolerance.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals intersect or are adjacent within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IntersectsOrAdjacent(
+            const OpenClosedInterval<OtherType> other, const T epsilon) const noexcept
+        {
+            const T other_start = static_cast<T>(other.GetStart());
+            const T other_end = static_cast<T>(other.GetEnd());
+            return end_inclusive_ >= (other_start - epsilon) && other_end >= (start_exclusive_ - epsilon);
+        }
+
         /// @brief Calculate the distance to another interval.
         ///
-        /// The distance is defined as the minimum distance between the two
-        /// intervals. If the intervals intersect or touch, the distance is 0.
+        /// The distance is defined as the minimum distance between the two intervals.
+        /// If the intervals intersect or touch, the distance is 0.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
         /// @param other The other interval to calculate the distance to.
         ///
-        /// @return The distance to the other interval.
+        /// @return The distance value.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T DistanceTo(
@@ -674,12 +889,10 @@ namespace bslt
         {
             const T other_start = static_cast<T>(other.GetStart());
             const T other_end = static_cast<T>(other.GetEnd());
-
             if (IntersectsOrAdjacent(other))
             {
                 return T{0};
             }
-
             if (end_inclusive_ < other_start)
             {
                 return other_start - end_inclusive_;
@@ -689,14 +902,14 @@ namespace bslt
 
         /// @brief Merges this interval with another interval.
         ///
-        /// Returns an optional interval representing the merged interval,
-        /// or std::nullopt if they cannot be merged because they are not
-        /// overlapping or touching.
+        /// Creates a new interval spanning the minimum start and maximum end of both intervals,
+        /// but only if they intersect or are adjacent.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @tparam ReturnValueType The type of the resulting interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to merge with.
-        /// @return An optional containing the merged interval, or std::nullopt.
+        ///
+        /// @return An optional containing the merged interval, or std::nullopt if they are disjoint.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<OpenClosedInterval<ReturnValueType>> Merge(
@@ -706,24 +919,50 @@ namespace bslt
             {
                 return std::nullopt;
             }
-
             const ReturnValueType start = std::min(static_cast<ReturnValueType>(start_exclusive_),
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_inclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
+            return OpenClosedInterval<ReturnValueType>(start, end);
+        }
 
+        /// @brief Merges this interval with another interval using tolerance to bridge gaps.
+        ///
+        /// Creates a new interval spanning the minimum start and maximum end of both intervals,
+        /// provided they are connected within the given epsilon.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
+        /// @param other The other interval.
+        /// @param epsilon The tolerance value used to determine connectivity.
+        ///
+        /// @return An optional containing the merged interval, or std::nullopt if they are disjoint beyond epsilon.
+        template <typename OtherType, typename ReturnValueType = T>
+            requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<OpenClosedInterval<ReturnValueType>> Merge(
+            const OpenClosedInterval<OtherType> other, const T epsilon) const noexcept
+        {
+            if (!IntersectsOrAdjacent(other, epsilon))
+            {
+                return std::nullopt;
+            }
+            const ReturnValueType start = std::min(static_cast<ReturnValueType>(start_exclusive_),
+                                                   static_cast<ReturnValueType>(other.GetStart()));
+            const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_inclusive_),
+                                                 static_cast<ReturnValueType>(other.GetEnd()));
             return OpenClosedInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Combines this interval with another interval.
         ///
-        /// Returns a new interval that encompasses both intervals,
-        /// including any space that is between them if they are disjoint.
+        /// Returns a new interval that encompasses both intervals (the bounding box),
+        /// regardless of whether they intersect or not.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @tparam ReturnValueType The type of the resulting interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to combine with.
-        /// @return A new interval that represents the "bounding box" of both.
+        ///
+        /// @return A new interval representing the bounding range of both inputs.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE OpenClosedInterval<ReturnValueType> Combine(
@@ -733,21 +972,18 @@ namespace bslt
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_inclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
-
             return OpenClosedInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Computes the intersection of the current interval with another interval.
         ///
-        /// This method calculates the overlapping part of the current interval and another interval.
-        /// If there is no intersection, it returns an empty optional.
+        /// This method returns the interval representing the overlapping region.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @tparam ReturnValueType The type of the return value. Defaults to the type of the interval's endpoints.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to compute the intersection with.
         ///
-        /// @return An optional containing the intersection interval if it exists,
-        /// or an empty optional if there is no intersection.
+        /// @return An optional containing the intersection interval, or std::nullopt if they do not intersect.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<OpenClosedInterval<ReturnValueType>> Intersection(
@@ -757,23 +993,21 @@ namespace bslt
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::min(static_cast<ReturnValueType>(end_inclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
-
             if (start >= end)
             {
                 return std::nullopt;
             }
-
             return OpenClosedInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Clamps the current interval to fit within another interval.
         ///
-        /// This method restricts the current interval to the boundaries defined by another interval.
-        /// If the current interval does not overlap with the boundary interval, it returns an empty optional.
+        /// This restricts the start and end of the current interval to not exceed the boundaries of the provided interval.
         ///
-        /// @tparam OtherType The type of the boundary interval's endpoints. Must be an arithmetic type.
+        /// @tparam OtherType The type of the boundary interval's endpoints.
+        /// @param boundary The interval defining the valid range.
         ///
-        /// @return An optional \c std::optional containing the clamped interval if it exists,
+        /// @return An optional containing the clamped interval, or std::nullopt if the result would be empty.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<OpenClosedInterval<T>> Clamp(
@@ -781,24 +1015,22 @@ namespace bslt
         {
             const T clamped_start = std::max(start_exclusive_, static_cast<T>(boundary.GetStart()));
             const T clamped_end = std::min(end_inclusive_, static_cast<T>(boundary.GetEnd()));
-
             if (clamped_start >= clamped_end)
             {
                 return std::nullopt;
             }
-
             return OpenClosedInterval(clamped_start, clamped_end);
         }
 
         /// @brief Compares two intervals for equality.
         ///
-        /// This method checks if the start and end values of two intervals are equal.
+        /// Checks if the start and end points are exactly equal.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param lhs The left-hand side interval to compare.
-        /// @param rhs The other interval to compare with.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param lhs The left-hand side interval.
+        /// @param rhs The right-hand side interval.
         ///
-        /// @return \c true if the intervals are equal, \c false otherwise.
+        /// @return \c true if intervals are equal, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<OtherType>
         friend constexpr BASALT_FORCE_INLINE bool operator==(const OpenClosedInterval lhs,
@@ -809,13 +1041,13 @@ namespace bslt
 
         /// @brief Compares two intervals for inequality.
         ///
-        /// This method checks if two intervals are not equal by negating the result of the equality operator.
+        /// Checks if the start or end points differ.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param lhs The left-hand side interval to compare.
-        /// @param rhs The other interval to compare with.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param lhs The left-hand side interval.
+        /// @param rhs The right-hand side interval.
         ///
-        /// @return \c true if the intervals are not equal, \c false otherwise.
+        /// @return \c true if intervals are not equal, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<OtherType>
         friend constexpr BASALT_FORCE_INLINE bool operator!=(const OpenClosedInterval lhs,
@@ -824,15 +1056,15 @@ namespace bslt
             return !(lhs == rhs);
         }
 
-        /// @brief Absl hash function for the \c Interval class.
+        /// @brief Computes the hash value for the interval.
         ///
-        /// This function computes a hash value for the interval by combining the hashes of its start and end values.
+        /// This function is compatible with the Abseil hashing framework.
         ///
-        /// @tparam H The hash type used by Absl.
-        /// @param h The initial hash value.
-        /// @param interval The interval for which to compute the hash.
+        /// @tparam H The hasher type.
+        /// @param h The hasher state.
+        /// @param interval The interval to hash.
         ///
-        /// @return The combined hash value.
+        /// @return The updated hasher state.
         template <typename H>
             requires AbslHasher<H>
         friend constexpr BASALT_FORCE_INLINE H AbslHashValue(H h, const OpenClosedInterval interval) noexcept
@@ -840,14 +1072,13 @@ namespace bslt
             return H::combine(std::move(h), interval.GetStart(), interval.GetEnd());
         }
 
-        /// @brief Formats the interval as a string using Absl's formatting.
+        /// @brief formats the interval for logging or debugging.
         ///
-        /// This function formats the interval in the form
-        /// "(start, end]" where "start" is exclusive and "end" is inclusive.
+        /// Formats the interval as "(start, end]".
         ///
-        /// @tparam Sink The type of the sink used for formatting.
-        /// @param sink The sink to which the formatted string will be written.
-        /// @param interval The interval to format.
+        /// @tparam Sink The sink type.
+        /// @param sink The sink to write to.
+        /// @param interval The interval to stringify.
         template <typename Sink>
             requires AbslStringifySink<Sink>
         friend BASALT_FORCE_INLINE void AbslStringify(Sink& sink, const OpenClosedInterval interval) noexcept
@@ -870,16 +1101,12 @@ namespace bslt
     class ClosedInterval
     {
     public:
-        /// @brief Type alias for the value type of the interval.
-        ///
-        /// This type alias is used to refer to the type of the interval's endpoints.
         using ValueType = T;
 
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
-        ///
-        /// @note The constructor ensures that the start value is always less than or equal to the end value.
+        /// It automatically sorts the values so that the start is the minimum and the end is the maximum.
         ///
         /// @param start_inclusive The inclusive start of the interval.
         /// @param end_inclusive The inclusive end of the interval.
@@ -891,9 +1118,9 @@ namespace bslt
 
         /// @brief Gets the inclusive start of the interval.
         ///
-        /// This method returns the inclusive start of the interval.
+        /// This method returns the lower bound of the interval, which is included in the set.
         ///
-        /// @return The inclusive start of the interval.
+        /// @return The inclusive start value.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T GetStart() const noexcept
         {
             return start_inclusive_;
@@ -901,9 +1128,9 @@ namespace bslt
 
         /// @brief Gets the inclusive end of the interval.
         ///
-        /// This method returns the inclusive end of the interval.
+        /// This method returns the upper bound of the interval, which is included in the set.
         ///
-        /// @return The inclusive end of the interval.
+        /// @return The inclusive end value.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T GetEnd() const noexcept
         {
             return end_inclusive_;
@@ -911,11 +1138,12 @@ namespace bslt
 
         /// @brief Computes the midpoint of the interval.
         ///
-        /// This method calculates the midpoint of the interval, which is the average of the start and end values.
+        /// This method calculates the arithmetic mean of the start and end values.
+        /// For floating point types, it returns the exact center. For integer types, it truncates towards zero.
         ///
-        /// @tparam ReturnValueType The type of the return value. Defaults to the type of the interval's endpoints.
+        /// @tparam ReturnValueType The type of the returned midpoint. Defaults to T.
         ///
-        /// @return The midpoint of the interval as an arithmetic type.
+        /// @return The midpoint of the interval.
         template <typename ReturnValueType = T>
             requires std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE ReturnValueType Midpoint() const noexcept
@@ -925,30 +1153,39 @@ namespace bslt
                 return (static_cast<ReturnValueType>(start_inclusive_)
                     + static_cast<ReturnValueType>(end_inclusive_)) / ReturnValueType{2};
             }
-
             return static_cast<ReturnValueType>(start_inclusive_) +
                 static_cast<ReturnValueType>(end_inclusive_ - start_inclusive_) / ReturnValueType{2};
         }
 
         /// @brief Checks if the interval is empty.
         ///
-        /// This method checks if the interval is empty, which occurs when the start value is greater than the end value.
+        /// This method checks if the interval contains no points.
+        /// For a closed interval [a, b], it is empty if a > b.
+        /// Note: Since the constructor sorts inputs, this should normally be false unless manually constructed invalidly.
         ///
         /// @return \c true if the interval is empty, \c false otherwise.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IsEmpty() const noexcept
         {
-            // Because the constructor sorts, start_inclusive_ is always <= end_inclusive_
-            // A non-empty [x, x] interval (containing one point) can be created,
-            // but an empty [x, y] where x > y cannot.
-            // This behavior is derived from the ClosedOpenInterval implementation.
             return start_inclusive_ > end_inclusive_;
+        }
+
+        /// @brief Checks if the interval is empty using a tolerance epsilon.
+        ///
+        /// This method checks if the interval is logically inverted beyond the epsilon tolerance.
+        ///
+        /// @param epsilon The tolerance value for checking emptiness.
+        ///
+        /// @return \c true if the interval is effectively empty considering tolerance, \c false otherwise.
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IsEmpty(const T epsilon) const noexcept
+        {
+            return (end_inclusive_ - start_inclusive_) < -epsilon;
         }
 
         /// @brief Gets the length of the interval.
         ///
-        /// This method calculates the length of the interval, which is the difference between the end and start values.
+        /// This method calculates the difference between the end and start values.
         ///
-        /// @return The length of the interval as an arithmetic type.
+        /// @return The length of the interval.
         [[nodiscard]] constexpr T Length() const noexcept
         {
             return end_inclusive_ - start_inclusive_;
@@ -956,12 +1193,12 @@ namespace bslt
 
         /// @brief Checks if the interval contains the given value.
         ///
-        /// This method checks if the specified value is within the interval, including both the start and end.
+        /// This method checks if the value is within [start, end].
         ///
-        /// @tparam OtherType The type of the value to check. Must be convertible to the interval's type.
-        /// @param value The value to check for containment in the interval.
+        /// @tparam OtherType The type of the value to check.
+        /// @param value The value to check.
         ///
-        /// @return \c true if the value is within the interval, \c false otherwise.
+        /// @return \c true if the value is contained, \c false otherwise.
         template <typename OtherType>
             requires std::convertible_to<OtherType, T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Contains(OtherType value) const noexcept
@@ -969,14 +1206,30 @@ namespace bslt
             return value >= start_inclusive_ && value <= end_inclusive_;
         }
 
-        /// @brief Checks if the interval contains another interval.
+        /// @brief Checks if the interval contains the given value with tolerance.
         ///
-        /// This method checks if the current interval fully contains another interval.
+        /// This method checks if the value is within [start - epsilon, end + epsilon].
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param other The other interval to check for containment.
+        /// @tparam OtherType The type of the value to check.
+        /// @param value The value to check.
+        /// @param epsilon The tolerance buffer to expand the interval boundaries.
         ///
-        /// @return \c true if the current interval contains the other interval, \c false otherwise.
+        /// @return \c true if the value is contained within the expanded interval, \c false otherwise.
+        template <typename OtherType>
+            requires std::convertible_to<OtherType, T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Contains(OtherType value, const T epsilon) const noexcept
+        {
+            return value >= (start_inclusive_ - epsilon) && value <= (end_inclusive_ + epsilon);
+        }
+
+        /// @brief Checks if the interval fully contains another interval.
+        ///
+        /// This method checks if the other interval is a subset of this interval.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        ///
+        /// @return \c true if this interval contains the other interval, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(
@@ -985,13 +1238,30 @@ namespace bslt
             return other.start_inclusive_ >= start_inclusive_ && other.end_inclusive_ <= end_inclusive_;
         }
 
+        /// @brief Checks if the interval fully contains another interval with tolerance.
+        ///
+        /// This method checks if the other interval is a subset of this interval, expanded by epsilon.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value used to expand this interval's boundaries.
+        ///
+        /// @return \c true if this interval (expanded) contains the other interval, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(const ClosedInterval<OtherType> other,
+                                                                          const T epsilon) const noexcept
+        {
+            return other.start_inclusive_ >= (start_inclusive_ - epsilon) &&
+                other.end_inclusive_ <= (end_inclusive_ + epsilon);
+        }
+
         /// @brief Checks if the current interval intersects with another interval.
         ///
-        /// This method checks if the current interval overlaps with another interval,
-        /// including touching at a single point.
+        /// This method determines if there is any overlap between the two intervals.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param other The other interval to check for intersection.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
         ///
         /// @return \c true if the intervals intersect, \c false otherwise.
         template <typename OtherType>
@@ -1003,14 +1273,30 @@ namespace bslt
                 std::min(end_inclusive_, static_cast<T>(other.GetEnd()));
         }
 
-        /// @brief Checks if this interval is adjacent to another interval.
+        /// @brief Checks if the current interval intersects with another interval with tolerance.
         ///
-        /// Adjacency is defined as being next to each other without overlapping.
-        /// For closed intervals, this means they touch at a single point,
-        /// which is also considered an intersection.
+        /// This method determines if there is any overlap between the two intervals, allowing for a fuzzy intersection.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @param other The other interval to check for adjacency.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals intersect within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Intersects(const ClosedInterval<OtherType> other,
+                                                                    const T epsilon) const noexcept
+        {
+            return std::max(start_inclusive_, static_cast<T>(other.GetStart())) <=
+                std::min(end_inclusive_, static_cast<T>(other.GetEnd())) + epsilon;
+        }
+
+        /// @brief Checks if this interval is adjacent to another interval.
+        ///
+        /// Adjacency implies the intervals touch exactly at an endpoint. For closed intervals, this also implies intersection at that point.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
         ///
         /// @return \c true if the intervals are adjacent, \c false otherwise.
         template <typename OtherType>
@@ -1022,10 +1308,36 @@ namespace bslt
             return end_inclusive_ == other_start || start_inclusive_ == other_end;
         }
 
+        /// @brief Checks if this interval is adjacent to another interval with tolerance.
+        ///
+        /// This checks if the endpoints of the two intervals are within epsilon of each other.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals are adjacent within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Adjacent(const ClosedInterval<OtherType> other,
+                                                                  const T epsilon) const noexcept
+        {
+            const T other_start = static_cast<T>(other.GetStart());
+            const T other_end = static_cast<T>(other.GetEnd());
+
+            auto diff1 = (end_inclusive_ > other_start)
+                             ? (end_inclusive_ - other_start)
+                             : (other_start - end_inclusive_);
+            auto diff2 = (start_inclusive_ > other_end)
+                             ? (start_inclusive_ - other_end)
+                             : (other_end - start_inclusive_);
+
+            return diff1 <= epsilon || diff2 <= epsilon;
+        }
+
         /// @brief Checks if this interval intersects or touches another interval.
         ///
-        /// This checks if the two intervals are not disjoint.
-        /// For ClosedInterval, this is logically equivalent to Intersects().
+        /// This checks if the two intervals are connected (non-disjoint).
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
         /// @param other The other interval to check.
@@ -1041,27 +1353,44 @@ namespace bslt
             return end_inclusive_ >= other_start && other_end >= start_inclusive_;
         }
 
+        /// @brief Checks if this interval intersects or touches another interval with tolerance.
+        ///
+        /// This checks if the two intervals are connected within an epsilon tolerance.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals intersect or are adjacent within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IntersectsOrAdjacent(
+            const ClosedInterval<OtherType> other, const T epsilon) const noexcept
+        {
+            const T other_start = static_cast<T>(other.GetStart());
+            const T other_end = static_cast<T>(other.GetEnd());
+            return end_inclusive_ >= (other_start - epsilon) && other_end >= (start_inclusive_ - epsilon);
+        }
+
         /// @brief Calculate the distance to another interval.
         ///
-        /// The distance is defined as the minimum distance between the two
-        /// intervals. If the intervals intersect, the distance is 0.
+        /// The distance is defined as the minimum distance between the two intervals.
+        /// If the intervals intersect, the distance is 0.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
         /// @param other The other interval to calculate the distance to.
         ///
-        /// @return The distance to the other interval.
+        /// @return The distance value.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T DistanceTo(const ClosedInterval<OtherType> other) const noexcept
         {
             const T other_start = static_cast<T>(other.GetStart());
             const T other_end = static_cast<T>(other.GetEnd());
-
             if (IntersectsOrAdjacent(other))
             {
                 return T{0};
             }
-
             if (end_inclusive_ < other_start)
             {
                 return other_start - end_inclusive_;
@@ -1071,14 +1400,14 @@ namespace bslt
 
         /// @brief Merges this interval with another interval.
         ///
-        /// Returns an optional interval representing the merged interval,
-        /// or std::nullopt if they cannot be merged because they are not
-        /// overlapping or touching.
+        /// Creates a new interval spanning the minimum start and maximum end of both intervals,
+        /// but only if they intersect or are adjacent.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @tparam ReturnValueType The type of the resulting interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to merge with.
-        /// @return An optional containing the merged interval, or std::nullopt.
+        ///
+        /// @return An optional containing the merged interval, or std::nullopt if they are disjoint.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<ClosedInterval<ReturnValueType>> Merge(
@@ -1088,24 +1417,50 @@ namespace bslt
             {
                 return std::nullopt;
             }
-
             const ReturnValueType start = std::min(static_cast<ReturnValueType>(start_inclusive_),
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_inclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
+            return ClosedInterval<ReturnValueType>(start, end);
+        }
 
+        /// @brief Merges this interval with another interval using tolerance to bridge gaps.
+        ///
+        /// Creates a new interval spanning the minimum start and maximum end of both intervals,
+        /// provided they are connected within the given epsilon.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
+        /// @param other The other interval.
+        /// @param epsilon The tolerance value used to determine connectivity.
+        ///
+        /// @return An optional containing the merged interval, or std::nullopt if they are disjoint beyond epsilon.
+        template <typename OtherType, typename ReturnValueType = T>
+            requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<ClosedInterval<ReturnValueType>> Merge(
+            const ClosedInterval<OtherType> other, const T epsilon) const noexcept
+        {
+            if (!IntersectsOrAdjacent(other, epsilon))
+            {
+                return std::nullopt;
+            }
+            const ReturnValueType start = std::min(static_cast<ReturnValueType>(start_inclusive_),
+                                                   static_cast<ReturnValueType>(other.GetStart()));
+            const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_inclusive_),
+                                                 static_cast<ReturnValueType>(other.GetEnd()));
             return ClosedInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Combines this interval with another interval.
         ///
-        /// Returns a new interval that encompasses both intervals,
-        /// including any space that is between them if they are disjoint.
+        /// Returns a new interval that encompasses both intervals (the bounding box),
+        /// regardless of whether they intersect or not.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @tparam ReturnValueType The type of the resulting interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to combine with.
-        /// @return A new interval that represents the "bounding box" of both.
+        ///
+        /// @return A new interval representing the bounding range of both inputs.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE ClosedInterval<ReturnValueType> Combine(
@@ -1115,21 +1470,18 @@ namespace bslt
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_inclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
-
             return ClosedInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Computes the intersection of the current interval with another interval.
         ///
-        /// This method calculates the overlapping part of the current interval and another interval.
-        /// If there is no intersection, it returns an empty optional.
+        /// This method returns the interval representing the overlapping region.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @tparam ReturnValueType The type of the return value. Defaults to the type of the interval's endpoints.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to compute the intersection with.
         ///
-        /// @return An optional containing the intersection interval if it exists,
-        /// or an empty optional if there is no intersection.
+        /// @return An optional containing the intersection interval, or std::nullopt if they do not intersect.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<ClosedInterval<ReturnValueType>> Intersection(
@@ -1139,23 +1491,21 @@ namespace bslt
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::min(static_cast<ReturnValueType>(end_inclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
-
             if (start > end)
             {
                 return std::nullopt;
             }
-
             return ClosedInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Clamps the current interval to fit within another interval.
         ///
-        /// This method restricts the current interval to the boundaries defined by another interval.
-        /// If the current interval does not overlap with the boundary interval, it returns an empty optional.
+        /// This restricts the start and end of the current interval to not exceed the boundaries of the provided interval.
         ///
-        /// @tparam OtherType The type of the boundary interval's endpoints. Must be an arithmetic type.
+        /// @tparam OtherType The type of the boundary interval's endpoints.
+        /// @param boundary The interval defining the valid range.
         ///
-        /// @return An optional \c std::optional containing the clamped interval if it exists,
+        /// @return An optional containing the clamped interval, or std::nullopt if the result would be empty.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<ClosedInterval<T>> Clamp(
@@ -1163,24 +1513,22 @@ namespace bslt
         {
             const T clamped_start = std::max(start_inclusive_, static_cast<T>(boundary.GetStart()));
             const T clamped_end = std::min(end_inclusive_, static_cast<T>(boundary.GetEnd()));
-
             if (clamped_start > clamped_end)
             {
                 return std::nullopt;
             }
-
             return ClosedInterval(clamped_start, clamped_end);
         }
 
         /// @brief Compares two intervals for equality.
         ///
-        /// This method checks if the start and end values of two intervals are equal.
+        /// Checks if the start and end points are exactly equal.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param lhs The left-hand side interval to compare.
-        /// @param rhs The other interval to compare with.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param lhs The left-hand side interval.
+        /// @param rhs The right-hand side interval.
         ///
-        /// @return \c true if the intervals are equal, \c false otherwise.
+        /// @return \c true if intervals are equal, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<OtherType>
         friend constexpr BASALT_FORCE_INLINE bool operator==(const ClosedInterval lhs,
@@ -1191,13 +1539,13 @@ namespace bslt
 
         /// @brief Compares two intervals for inequality.
         ///
-        /// This method checks if two intervals are not equal by negating the result of the equality operator.
+        /// Checks if the start or end points differ.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param lhs The left-hand side interval to compare.
-        /// @param rhs The other interval to compare with.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param lhs The left-hand side interval.
+        /// @param rhs The right-hand side interval.
         ///
-        /// @return \c true if the intervals are not equal, \c false otherwise.
+        /// @return \c true if intervals are not equal, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<OtherType>
         friend constexpr BASALT_FORCE_INLINE bool operator!=(const ClosedInterval lhs,
@@ -1206,15 +1554,15 @@ namespace bslt
             return !(lhs == rhs);
         }
 
-        /// @brief Absl hash function for the \c Interval class.
+        /// @brief Computes the hash value for the interval.
         ///
-        /// This function computes a hash value for the interval by combining the hashes of its start and end values.
+        /// This function is compatible with the Abseil hashing framework.
         ///
-        /// @tparam H The hash type used by Absl.
-        /// @param h The initial hash value.
-        /// @param interval The interval for which to compute the hash.
+        /// @tparam H The hasher type.
+        /// @param h The hasher state.
+        /// @param interval The interval to hash.
         ///
-        /// @return The combined hash value.
+        /// @return The updated hasher state.
         template <typename H>
             requires AbslHasher<H>
         friend constexpr BASALT_FORCE_INLINE H AbslHashValue(H h, const ClosedInterval interval) noexcept
@@ -1222,14 +1570,13 @@ namespace bslt
             return H::combine(std::move(h), interval.GetStart(), interval.GetEnd());
         }
 
-        /// @brief Formats the interval as a string using Absl's formatting.
+        /// @brief formats the interval for logging or debugging.
         ///
-        /// This function formats the interval in the form
-        /// "[start, end]" where "start" and "end" are inclusive.
+        /// Formats the interval as "[start, end]".
         ///
-        /// @tparam Sink The type of the sink used for formatting.
-        /// @param sink The sink to which the formatted string will be written.
-        /// @param interval The interval to format.
+        /// @tparam Sink The sink type.
+        /// @param sink The sink to write to.
+        /// @param interval The interval to stringify.
         template <typename Sink>
             requires AbslStringifySink<Sink>
         friend BASALT_FORCE_INLINE void AbslStringify(Sink& sink, const ClosedInterval interval) noexcept
@@ -1252,16 +1599,12 @@ namespace bslt
     class OpenInterval
     {
     public:
-        /// @brief Type alias for the value type of the interval.
-        ///
-        /// This type alias is used to refer to the type of the interval's endpoints.
         using ValueType = T;
 
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
-        ///
-        /// @note The constructor ensures that the start value is always less than or equal to the end value.
+        /// It automatically sorts the values so that the start is the minimum and the end is the maximum.
         ///
         /// @param start_exclusive The exclusive start of the interval.
         /// @param end_exclusive The exclusive end of the interval.
@@ -1273,9 +1616,9 @@ namespace bslt
 
         /// @brief Gets the exclusive start of the interval.
         ///
-        /// This method returns the exclusive start of the interval.
+        /// This method returns the lower bound of the interval, which is excluded from the set.
         ///
-        /// @return The exclusive start of the interval.
+        /// @return The exclusive start value.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T GetStart() const noexcept
         {
             return start_exclusive_;
@@ -1283,9 +1626,9 @@ namespace bslt
 
         /// @brief Gets the exclusive end of the interval.
         ///
-        /// This method returns the exclusive end of the interval.
+        /// This method returns the upper bound of the interval, which is excluded from the set.
         ///
-        /// @return The exclusive end of the interval.
+        /// @return The exclusive end value.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T GetEnd() const noexcept
         {
             return end_exclusive_;
@@ -1293,11 +1636,12 @@ namespace bslt
 
         /// @brief Computes the midpoint of the interval.
         ///
-        /// This method calculates the midpoint of the interval, which is the average of the start and end values.
+        /// This method calculates the arithmetic mean of the start and end values.
+        /// For floating point types, it returns the exact center. For integer types, it truncates towards zero.
         ///
-        /// @tparam ReturnValueType The type of the return value. Defaults to the type of the interval's endpoints.
+        /// @tparam ReturnValueType The type of the returned midpoint. Defaults to T.
         ///
-        /// @return The midpoint of the interval as an arithmetic type.
+        /// @return The midpoint of the interval.
         template <typename ReturnValueType = T>
             requires std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE ReturnValueType Midpoint() const noexcept
@@ -1307,14 +1651,14 @@ namespace bslt
                 return (static_cast<ReturnValueType>(start_exclusive_)
                     + static_cast<ReturnValueType>(end_exclusive_)) / ReturnValueType{2};
             }
-
             return static_cast<ReturnValueType>(start_exclusive_) +
                 static_cast<ReturnValueType>(end_exclusive_ - start_exclusive_) / ReturnValueType{2};
         }
 
         /// @brief Checks if the interval is empty.
         ///
-        /// This method checks if the interval is empty, which occurs when the start value is greater than or equal to the end value.
+        /// This method checks if the interval contains no points.
+        /// For an open interval (a, b), it is empty if a >= b.
         ///
         /// @return \c true if the interval is empty, \c false otherwise.
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IsEmpty() const noexcept
@@ -1322,11 +1666,23 @@ namespace bslt
             return start_exclusive_ >= end_exclusive_;
         }
 
+        /// @brief Checks if the interval is empty using a tolerance epsilon.
+        ///
+        /// This method checks if the length of the interval is less than or equal to the given epsilon.
+        ///
+        /// @param epsilon The tolerance value for checking emptiness.
+        ///
+        /// @return \c true if the interval length is <= epsilon, \c false otherwise.
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IsEmpty(const T epsilon) const noexcept
+        {
+            return (end_exclusive_ - start_exclusive_) <= epsilon;
+        }
+
         /// @brief Gets the length of the interval.
         ///
-        /// This method calculates the length of the interval, which is the difference between the end and start values.
+        /// This method calculates the difference between the end and start values.
         ///
-        /// @return The length of the interval as an arithmetic type.
+        /// @return The length of the interval.
         [[nodiscard]] constexpr T Length() const noexcept
         {
             return end_exclusive_ - start_exclusive_;
@@ -1334,12 +1690,12 @@ namespace bslt
 
         /// @brief Checks if the interval contains the given value.
         ///
-        /// This method checks if the specified value is within the interval, excluding both the start and end.
+        /// This method checks if the value is within (start, end).
         ///
-        /// @tparam OtherType The type of the value to check. Must be convertible to the interval's type.
-        /// @param value The value to check for containment in the interval.
+        /// @tparam OtherType The type of the value to check.
+        /// @param value The value to check.
         ///
-        /// @return \c true if the value is within the interval, \c false otherwise.
+        /// @return \c true if the value is contained, \c false otherwise.
         template <typename OtherType>
             requires std::convertible_to<OtherType, T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Contains(OtherType value) const noexcept
@@ -1347,14 +1703,30 @@ namespace bslt
             return value > start_exclusive_ && value < end_exclusive_;
         }
 
-        /// @brief Checks if the interval contains another interval.
+        /// @brief Checks if the interval contains the given value with tolerance.
         ///
-        /// This method checks if the current interval fully contains another interval.
+        /// This method checks if the value is within (start - epsilon, end + epsilon).
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param other The other interval to check for containment.
+        /// @tparam OtherType The type of the value to check.
+        /// @param value The value to check.
+        /// @param epsilon The tolerance buffer to expand the interval boundaries.
         ///
-        /// @return \c true if the current interval contains the other interval, \c false otherwise.
+        /// @return \c true if the value is contained within the expanded interval, \c false otherwise.
+        template <typename OtherType>
+            requires std::convertible_to<OtherType, T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Contains(OtherType value, const T epsilon) const noexcept
+        {
+            return value > (start_exclusive_ - epsilon) && value < (end_exclusive_ + epsilon);
+        }
+
+        /// @brief Checks if the interval fully contains another interval.
+        ///
+        /// This method checks if the other interval is a subset of this interval.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        ///
+        /// @return \c true if this interval contains the other interval, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(
@@ -1363,12 +1735,30 @@ namespace bslt
             return other.start_exclusive_ >= start_exclusive_ && other.end_exclusive_ <= end_exclusive_;
         }
 
+        /// @brief Checks if the interval fully contains another interval with tolerance.
+        ///
+        /// This method checks if the other interval is a subset of this interval, expanded by epsilon.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value used to expand this interval's boundaries.
+        ///
+        /// @return \c true if this interval (expanded) contains the other interval, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(const OpenInterval<OtherType> other,
+                                                                          const T epsilon) const noexcept
+        {
+            return other.start_exclusive_ >= (start_exclusive_ - epsilon) &&
+                other.end_exclusive_ <= (end_exclusive_ + epsilon);
+        }
+
         /// @brief Checks if the current interval intersects with another interval.
         ///
-        /// This method checks if the current interval overlaps with another interval.
+        /// This method determines if there is any overlap between the two intervals.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param other The other interval to check for intersection.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
         ///
         /// @return \c true if the intervals intersect, \c false otherwise.
         template <typename OtherType>
@@ -1379,12 +1769,30 @@ namespace bslt
                 std::min(end_exclusive_, static_cast<T>(other.GetEnd()));
         }
 
-        /// @brief Checks if this interval is adjacent to another interval.
+        /// @brief Checks if the current interval intersects with another interval with tolerance.
         ///
-        /// Adjacency is defined as being next to each other without overlapping.
+        /// This method determines if there is any overlap between the two intervals, allowing for a fuzzy intersection.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @param other The other interval to check for adjacency.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals intersect within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Intersects(const OpenInterval<OtherType> other,
+                                                                    const T epsilon) const noexcept
+        {
+            return std::max(start_exclusive_, static_cast<T>(other.GetStart())) <
+                std::min(end_exclusive_, static_cast<T>(other.GetEnd())) + epsilon;
+        }
+
+        /// @brief Checks if this interval is adjacent to another interval.
+        ///
+        /// Adjacency implies the intervals touch exactly at an endpoint but do not strictly overlap.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
         ///
         /// @return \c true if the intervals are adjacent, \c false otherwise.
         template <typename OtherType>
@@ -1396,9 +1804,36 @@ namespace bslt
             return end_exclusive_ == other_start || start_exclusive_ == other_end;
         }
 
+        /// @brief Checks if this interval is adjacent to another interval with tolerance.
+        ///
+        /// This checks if the endpoints of the two intervals are within epsilon of each other.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals are adjacent within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool Adjacent(const OpenInterval<OtherType> other,
+                                                                  const T epsilon) const noexcept
+        {
+            const T other_start = static_cast<T>(other.GetStart());
+            const T other_end = static_cast<T>(other.GetEnd());
+
+            auto diff1 = (end_exclusive_ > other_start)
+                             ? (end_exclusive_ - other_start)
+                             : (other_start - end_exclusive_);
+            auto diff2 = (start_exclusive_ > other_end)
+                             ? (start_exclusive_ - other_end)
+                             : (other_end - start_exclusive_);
+
+            return diff1 <= epsilon || diff2 <= epsilon;
+        }
+
         /// @brief Checks if this interval intersects or touches another interval.
         ///
-        /// This checks if the two intervals are not disjoint.
+        /// This checks if the two intervals are connected (non-disjoint).
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
         /// @param other The other interval to check.
@@ -1414,27 +1849,44 @@ namespace bslt
             return end_exclusive_ >= other_start && other_end >= start_exclusive_;
         }
 
+        /// @brief Checks if this interval intersects or touches another interval with tolerance.
+        ///
+        /// This checks if the two intervals are connected within an epsilon tolerance.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param other The other interval to check.
+        /// @param epsilon The tolerance value.
+        ///
+        /// @return \c true if the intervals intersect or are adjacent within epsilon, \c false otherwise.
+        template <typename OtherType>
+            requires std::is_arithmetic_v<T>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE bool IntersectsOrAdjacent(
+            const OpenInterval<OtherType> other, const T epsilon) const noexcept
+        {
+            const T other_start = static_cast<T>(other.GetStart());
+            const T other_end = static_cast<T>(other.GetEnd());
+            return end_exclusive_ >= (other_start - epsilon) && other_end >= (start_exclusive_ - epsilon);
+        }
+
         /// @brief Calculate the distance to another interval.
         ///
-        /// The distance is defined as the minimum distance between the two
-        /// intervals. If the intervals intersect or touch, the distance is 0.
+        /// The distance is defined as the minimum distance between the two intervals.
+        /// If the intervals intersect or touch, the distance is 0.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
         /// @param other The other interval to calculate the distance to.
         ///
-        /// @return The distance to the other interval.
+        /// @return The distance value.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE T DistanceTo(const OpenInterval<OtherType> other) const noexcept
         {
             const T other_start = static_cast<T>(other.GetStart());
             const T other_end = static_cast<T>(other.GetEnd());
-
             if (IntersectsOrAdjacent(other))
             {
                 return T{0};
             }
-
             if (end_exclusive_ <= other_start)
             {
                 return other_start - end_exclusive_;
@@ -1444,14 +1896,14 @@ namespace bslt
 
         /// @brief Merges this interval with another interval.
         ///
-        /// Returns an optional interval representing the merged interval,
-        /// or std::nullopt if they cannot be merged because they are not
-        /// overlapping or touching.
+        /// Creates a new interval spanning the minimum start and maximum end of both intervals,
+        /// but only if they intersect or are adjacent.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @tparam ReturnValueType The type of the resulting interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to merge with.
-        /// @return An optional containing the merged interval, or std::nullopt.
+        ///
+        /// @return An optional containing the merged interval, or std::nullopt if they are disjoint.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<OpenInterval<ReturnValueType>> Merge(
@@ -1461,24 +1913,50 @@ namespace bslt
             {
                 return std::nullopt;
             }
-
             const ReturnValueType start = std::min(static_cast<ReturnValueType>(start_exclusive_),
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_exclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
+            return OpenInterval<ReturnValueType>(start, end);
+        }
 
+        /// @brief Merges this interval with another interval using tolerance to bridge gaps.
+        ///
+        /// Creates a new interval spanning the minimum start and maximum end of both intervals,
+        /// provided they are connected within the given epsilon.
+        ///
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
+        /// @param other The other interval.
+        /// @param epsilon The tolerance value used to determine connectivity.
+        ///
+        /// @return An optional containing the merged interval, or std::nullopt if they are disjoint beyond epsilon.
+        template <typename OtherType, typename ReturnValueType = T>
+            requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
+        [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<OpenInterval<ReturnValueType>> Merge(
+            const OpenInterval<OtherType> other, const T epsilon) const noexcept
+        {
+            if (!IntersectsOrAdjacent(other, epsilon))
+            {
+                return std::nullopt;
+            }
+            const ReturnValueType start = std::min(static_cast<ReturnValueType>(start_exclusive_),
+                                                   static_cast<ReturnValueType>(other.GetStart()));
+            const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_exclusive_),
+                                                 static_cast<ReturnValueType>(other.GetEnd()));
             return OpenInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Combines this interval with another interval.
         ///
-        /// Returns a new interval that encompasses both intervals,
-        /// including any space that is between them if they are disjoint.
+        /// Returns a new interval that encompasses both intervals (the bounding box),
+        /// regardless of whether they intersect or not.
         ///
         /// @tparam OtherType The type of the other interval's endpoints.
-        /// @tparam ReturnValueType The type of the resulting interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to combine with.
-        /// @return A new interval that represents the "bounding box" of both.
+        ///
+        /// @return A new interval representing the bounding range of both inputs.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T> && std::is_arithmetic_v<OtherType> && std::is_arithmetic_v<ReturnValueType>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE OpenInterval<ReturnValueType> Combine(
@@ -1488,21 +1966,18 @@ namespace bslt
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::max(static_cast<ReturnValueType>(end_exclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
-
             return OpenInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Computes the intersection of the current interval with another interval.
         ///
-        /// This method calculates the overlapping part of the current interval and another interval.
-        /// If there is no intersection, it returns an empty optional.
+        /// This method returns the interval representing the overlapping region.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @tparam ReturnValueType The type of the return value. Defaults to the type of the interval's endpoints.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @tparam ReturnValueType The value type of the resulting interval.
         /// @param other The other interval to compute the intersection with.
         ///
-        /// @return An optional containing the intersection interval if it exists,
-        /// or an empty optional if there is no intersection.
+        /// @return An optional containing the intersection interval, or std::nullopt if they do not intersect.
         template <typename OtherType, typename ReturnValueType = T>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<OpenInterval<ReturnValueType>> Intersection(
@@ -1512,23 +1987,21 @@ namespace bslt
                                                    static_cast<ReturnValueType>(other.GetStart()));
             const ReturnValueType end = std::min(static_cast<ReturnValueType>(end_exclusive_),
                                                  static_cast<ReturnValueType>(other.GetEnd()));
-
             if (start >= end)
             {
                 return std::nullopt;
             }
-
             return OpenInterval<ReturnValueType>(start, end);
         }
 
         /// @brief Clamps the current interval to fit within another interval.
         ///
-        /// This method restricts the current interval to the boundaries defined by another interval.
-        /// If the current interval does not overlap with the boundary interval, it returns an empty optional.
+        /// This restricts the start and end of the current interval to not exceed the boundaries of the provided interval.
         ///
-        /// @tparam OtherType The type of the boundary interval's endpoints. Must be an arithmetic type.
+        /// @tparam OtherType The type of the boundary interval's endpoints.
+        /// @param boundary The interval defining the valid range.
         ///
-        /// @return An optional \c std::optional containing the clamped interval if it exists,
+        /// @return An optional containing the clamped interval, or std::nullopt if the result would be empty.
         template <typename OtherType>
             requires std::is_arithmetic_v<T>
         [[nodiscard]] constexpr BASALT_FORCE_INLINE std::optional<OpenInterval<T>> Clamp(
@@ -1536,24 +2009,22 @@ namespace bslt
         {
             const T clamped_start = std::max(start_exclusive_, static_cast<T>(boundary.GetStart()));
             const T clamped_end = std::min(end_exclusive_, static_cast<T>(boundary.GetEnd()));
-
             if (clamped_start >= clamped_end)
             {
                 return std::nullopt;
             }
-
             return OpenInterval(clamped_start, clamped_end);
         }
 
         /// @brief Compares two intervals for equality.
         ///
-        /// This method checks if the start and end values of two intervals are equal.
+        /// Checks if the start and end points are exactly equal.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param lhs The left-hand side interval to compare.
-        /// @param rhs The other interval to compare with.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param lhs The left-hand side interval.
+        /// @param rhs The right-hand side interval.
         ///
-        /// @return \c true if the intervals are equal, \c false otherwise.
+        /// @return \c true if intervals are equal, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<OtherType>
         friend constexpr BASALT_FORCE_INLINE bool operator==(const OpenInterval lhs,
@@ -1564,13 +2035,13 @@ namespace bslt
 
         /// @brief Compares two intervals for inequality.
         ///
-        /// This method checks if two intervals are not equal by negating the result of the equality operator.
+        /// Checks if the start or end points differ.
         ///
-        /// @tparam OtherType The type of the other interval's endpoints. Must be an arithmetic type.
-        /// @param lhs The left-hand side interval to compare.
-        /// @param rhs The other interval to compare with.
+        /// @tparam OtherType The type of the other interval's endpoints.
+        /// @param lhs The left-hand side interval.
+        /// @param rhs The right-hand side interval.
         ///
-        /// @return \c true if the intervals are not equal, \c false otherwise.
+        /// @return \c true if intervals are not equal, \c false otherwise.
         template <typename OtherType>
             requires std::is_arithmetic_v<OtherType>
         friend constexpr BASALT_FORCE_INLINE bool operator!=(const OpenInterval lhs,
@@ -1579,15 +2050,15 @@ namespace bslt
             return !(lhs == rhs);
         }
 
-        /// @brief Absl hash function for the \c Interval class.
+        /// @brief Computes the hash value for the interval.
         ///
-        /// This function computes a hash value for the interval by combining the hashes of its start and end values.
+        /// This function is compatible with the Abseil hashing framework.
         ///
-        /// @tparam H The hash type used by Absl.
-        /// @param h The initial hash value.
-        /// @param interval The interval for which to compute the hash.
+        /// @tparam H The hasher type.
+        /// @param h The hasher state.
+        /// @param interval The interval to hash.
         ///
-        /// @return The combined hash value.
+        /// @return The updated hasher state.
         template <typename H>
             requires AbslHasher<H>
         friend constexpr BASALT_FORCE_INLINE H AbslHashValue(H h, const OpenInterval interval) noexcept
@@ -1595,14 +2066,13 @@ namespace bslt
             return H::combine(std::move(h), interval.GetStart(), interval.GetEnd());
         }
 
-        /// @brief Formats the interval as a string using Absl's formatting.
+        /// @brief formats the interval for logging or debugging.
         ///
-        /// This function formats the interval in the form
-        /// "(start, end)" where "start" and "end" are exclusive.
+        /// Formats the interval as "(start, end)".
         ///
-        /// @tparam Sink The type of the sink used for formatting.
-        /// @param sink The sink to which the formatted string will be written.
-        /// @param interval The interval to format.
+        /// @tparam Sink The sink type.
+        /// @param sink The sink to write to.
+        /// @param interval The interval to stringify.
         template <typename Sink>
             requires AbslStringifySink<Sink>
         friend BASALT_FORCE_INLINE void AbslStringify(Sink& sink, const OpenInterval interval) noexcept

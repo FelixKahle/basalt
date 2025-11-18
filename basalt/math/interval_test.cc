@@ -1479,4 +1479,160 @@ namespace bslt::test
         constexpr ClosedOpenInterval<int> i_empty(0, 0);
         EXPECT_EQ(absl::StrFormat("%v", i_empty), "[0, 0)");
     }
+
+    // =========================================================================
+    // Epsilon Overload Tests
+    // =========================================================================
+
+    using EpsilonTestTypes = ::testing::Types<float, double>;
+
+    template <typename T>
+    class EpsilonTypedTest : public ::testing::Test
+    {
+    };
+
+    TYPED_TEST_SUITE(EpsilonTypedTest, EpsilonTestTypes);
+
+    TYPED_TEST(EpsilonTypedTest, IsEmptyWithEpsilon)
+    {
+        using T = TypeParam;
+        const T epsilon = T{0.1};
+
+        // Length is 0.05, which is <= 0.1, so it should be considered empty
+        const ClosedOpenInterval<T> nearly_empty(T{0}, T{0.05});
+        EXPECT_TRUE(nearly_empty.IsEmpty(epsilon));
+
+        // Length is 0.15, which is > 0.1, so NOT empty
+        const ClosedOpenInterval<T> not_empty(T{0}, T{0.15});
+        EXPECT_FALSE(not_empty.IsEmpty(epsilon));
+
+        // ClosedInterval construction forces start <= end.
+        // ClosedInterval(0, -0.2) becomes [-0.2, 0].
+        // Length is 0.2, which is > 0.1.
+        // The class does not support "inverted" intervals via construction.
+        const ClosedInterval<T> closed_interval(T{0}, T{-0.2});
+        EXPECT_FALSE(closed_interval.IsEmpty(epsilon));
+    }
+
+    TYPED_TEST(EpsilonTypedTest, ContainsValueWithEpsilon)
+    {
+        using T = TypeParam;
+        const T epsilon = T{0.1};
+        const ClosedOpenInterval<T> i(T{10}, T{20}); // [10, 20)
+
+        // Strictly outside, but within epsilon
+        EXPECT_TRUE(i.Contains(T{9.95}, epsilon)); // 10 - 0.1 = 9.9
+        EXPECT_TRUE(i.Contains(T{20.05}, epsilon)); // 20 + 0.1 = 20.1
+
+        // Outside epsilon
+        EXPECT_FALSE(i.Contains(T{9.8}, epsilon));
+        EXPECT_FALSE(i.Contains(T{20.2}, epsilon));
+    }
+
+    TYPED_TEST(EpsilonTypedTest, ContainsIntervalWithEpsilon)
+    {
+        using T = TypeParam;
+        const T epsilon = T{0.1};
+        const ClosedOpenInterval<T> i(T{10}, T{20});
+
+        // Slightly larger interval that wouldn't fit strictly, but fits with epsilon
+        // i is [10, 20). expanded: [9.9, 20.1)
+        // other is [9.95, 20.05)
+        const ClosedOpenInterval<T> slightly_larger(T{9.95}, T{20.05});
+        EXPECT_TRUE(i.ContainsInterval(slightly_larger, epsilon));
+
+        // Way too big
+        const ClosedOpenInterval<T> way_too_big(T{9.0}, T{21.0});
+        EXPECT_FALSE(i.ContainsInterval(way_too_big, epsilon));
+    }
+
+    TYPED_TEST(EpsilonTypedTest, IntersectsWithEpsilon)
+    {
+        using T = TypeParam;
+        const T epsilon = T{0.1};
+        const ClosedOpenInterval<T> i(T{10}, T{20});
+
+        // Strictly disjoint: [20.05, 30)
+        // With epsilon 0.1, i effectively reaches 20.1 (conceptually for intersection check)
+        // Logic: max(10, 20.05) < min(20, 30) + 0.1
+        //        20.05 < 20 + 0.1 -> 20.05 < 20.1 -> TRUE
+        EXPECT_TRUE(i.Intersects(ClosedOpenInterval<T>(T{20.05}, T{30}), epsilon));
+
+        // Too far away
+        EXPECT_FALSE(i.Intersects(ClosedOpenInterval<T>(T{20.2}, T{30}), epsilon));
+    }
+
+    TYPED_TEST(EpsilonTypedTest, AdjacentWithEpsilon)
+    {
+        using T = TypeParam;
+        const T epsilon = T{0.1};
+        const ClosedOpenInterval<T> i(T{10}, T{20});
+
+        // Gap is 0.05. Strict Adjacent is false. Epsilon Adjacent is true.
+        // [20.05, 30)
+        // diff1 = 20.05 - 20 = 0.05. 0.05 <= 0.1 -> True.
+        EXPECT_TRUE(i.Adjacent(ClosedOpenInterval<T>(T{20.05}, T{30}), epsilon));
+
+        // Gap is 0.2. False.
+        EXPECT_FALSE(i.Adjacent(ClosedOpenInterval<T>(T{20.2}, T{30}), epsilon));
+    }
+
+    TYPED_TEST(EpsilonTypedTest, IntersectsOrAdjacentWithEpsilon)
+    {
+        using T = TypeParam;
+        const T epsilon = T{0.1};
+        const ClosedOpenInterval<T> i(T{10}, T{20});
+
+        // Gap of 0.05
+        EXPECT_TRUE(i.IntersectsOrAdjacent(ClosedOpenInterval<T>(T{20.05}, T{30}), epsilon));
+
+        // Gap of 0.2
+        EXPECT_FALSE(i.IntersectsOrAdjacent(ClosedOpenInterval<T>(T{20.2}, T{30}), epsilon));
+    }
+
+    TYPED_TEST(EpsilonTypedTest, MergeWithEpsilon)
+    {
+        using T = TypeParam;
+        const T epsilon = T{0.5};
+        const ClosedOpenInterval<T> i1(T{0}, T{10});
+        const ClosedOpenInterval<T> i2(T{10.4}, T{20}); // Gap of 0.4
+
+        // Strictly, these don't touch or intersect.
+        EXPECT_FALSE(i1.Merge(i2).has_value());
+
+        // With epsilon 0.5, they should merge.
+        auto res = i1.Merge(i2, epsilon);
+        ASSERT_TRUE(res.has_value());
+        // Result should span min start to max end: [0, 20)
+        // Note: The gap is bridged, consuming the empty space.
+        EXPECT_EQ(res.value(), ClosedOpenInterval<T>(T{0}, T{20}));
+
+        const ClosedOpenInterval<T> i3(T{10.6}, T{20}); // Gap of 0.6
+        EXPECT_FALSE(i1.Merge(i3, epsilon).has_value());
+    }
+
+    // Explicit tests for different interval types to ensure template coverage
+    TEST_F(IntervalTest, EpsilonOverloadsDifferentTypes)
+    {
+        double eps = 0.1;
+
+        // OpenClosed (10, 20]
+        OpenClosedInterval<double> oc(10.0, 20.0);
+        // Check near start (9.95 is outside strict, inside with eps)
+        EXPECT_TRUE(oc.Contains(9.95, eps));
+        // Check near end (20.05 is outside strict, inside with eps)
+        EXPECT_TRUE(oc.Contains(20.05, eps));
+
+        // Closed [10, 20]
+        ClosedInterval<double> c(10.0, 20.0);
+        // Adjacent with gap
+        ClosedInterval<double> c_gap(20.05, 30.0);
+        EXPECT_TRUE(c.Adjacent(c_gap, eps));
+
+        // Open (10, 20)
+        OpenInterval<double> o(10.0, 20.0);
+        // Intersection with gap
+        OpenInterval<double> o_gap(20.05, 30.0);
+        EXPECT_TRUE(o.Intersects(o_gap, eps));
+    }
 } // namespace bslt::test
