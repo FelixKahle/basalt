@@ -23,26 +23,21 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include <vector>
+#include <random>
 
 namespace bslt::test
 {
-    // Helper to get intervals from a set
     template <typename T, IntervalSetStorage Storage>
-    std::vector<ClosedOpenInterval<T>> GetIntervals(const IntervalSet<T, Storage>& set)
+    static std::vector<ClosedOpenInterval<T>> GetIntervals(const IntervalSet<T, Storage>& set)
     {
         return std::vector<ClosedOpenInterval<T>>(set.begin(), set.end());
     }
-
-    // =========================================================================
-    // Typed Tests (Vector Backend)
-    // =========================================================================
 
     template <typename T>
     class IntervalSetVectorTypedTest : public ::testing::Test
     {
     };
 
-    // Added float and double to the test types
     using TestTypes = ::testing::Types<int, size_t, int64_t, float, double>;
     TYPED_TEST_SUITE(IntervalSetVectorTypedTest, TestTypes);
 
@@ -310,10 +305,6 @@ namespace bslt::test
         EXPECT_FALSE(set.Intersects(Interval(static_cast<T>(5), static_cast<T>(10))));
     }
 
-    // =========================================================================
-    // Set-Based Operations Tests (using int, kVector)
-    // =========================================================================
-
     class IntervalSetOperationsVectorTest : public ::testing::Test
     {
     protected:
@@ -374,10 +365,6 @@ namespace bslt::test
         EXPECT_THAT(GetIntervals(a), ::testing::ElementsAre(Interval(5, 10), Interval(20, 30), Interval(40, 45)));
     }
 
-    // =========================================================================
-    // Typed Tests (BTree Backend)
-    // =========================================================================
-
     template <typename T>
     class IntervalSetBTreeTypedTest : public ::testing::Test
     {
@@ -425,10 +412,6 @@ namespace bslt::test
         EXPECT_FALSE(set.ContainsInterval(Interval(static_cast<T>(0), static_cast<T>(101))));
     }
 
-    // =========================================================================
-    // Set-Based Operations Tests (using int, kBTree)
-    // =========================================================================
-
     class IntervalSetOperationsBTreeTest : public ::testing::Test
     {
     protected:
@@ -451,5 +434,450 @@ namespace bslt::test
         b.Insert(Interval(40, 60));
         a.Erase(b);
         EXPECT_THAT(GetIntervals(a), ::testing::ElementsAre(Interval(0, 40), Interval(60, 100)));
+    }
+
+    template <typename T>
+    class IntervalSetRangesTest : public ::testing::Test
+    {
+    };
+
+    TYPED_TEST_SUITE(IntervalSetRangesTest, TestTypes);
+
+    TYPED_TEST(IntervalSetRangesTest, RangeConstructorViews)
+    {
+        // Test compatibility with std::views pipeline
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        std::vector<T> starts = {0, 20, 40};
+
+        // Transform vector of ints into vector of Intervals [x, x+10)
+        auto view = starts | std::views::transform([](T x) { return Interval(x, x + 10); });
+
+        IntervalSet<T, IntervalSetStorage::kVector> set(view);
+
+        EXPECT_THAT(GetIntervals(set), ::testing::ElementsAre(
+                        Interval(0, 10), Interval(20, 30), Interval(40, 50)));
+    }
+
+    TYPED_TEST(IntervalSetRangesTest, InsertRange)
+    {
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        IntervalSet<T, IntervalSetStorage::kVector> set;
+        set.Insert(Interval(0, 10));
+
+        std::vector<Interval> more = {Interval(10, 20), Interval(100, 110)};
+
+        set.InsertRange(more);
+
+        // [0, 10) + [10, 20) merges to [0, 20)
+        EXPECT_THAT(GetIntervals(set), ::testing::ElementsAre(
+                        Interval(0, 20), Interval(100, 110)));
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, Operators)
+    {
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        IntervalSet<T> a;
+        a.Insert(Interval(0, 10));
+        IntervalSet<T> b;
+        b.Insert(Interval(5, 15));
+
+        // Operator + (Union)
+        // [0, 10) + [5, 15) = [0, 15)
+        IntervalSet<T> c = a + b;
+        EXPECT_THAT(GetIntervals(c), ::testing::ElementsAre(Interval(0, 15)));
+
+        // Operator +=
+        IntervalSet<T> d = a;
+        d += b;
+        EXPECT_EQ(c, d);
+
+        // Operator - (Difference)
+        // [0, 10) - [5, 15) = [0, 5)
+        IntervalSet<T> e = a - b;
+        EXPECT_THAT(GetIntervals(e), ::testing::ElementsAre(Interval(0, 5)));
+
+        // Operator -=
+        IntervalSet<T> f = a;
+        f -= b;
+        EXPECT_EQ(e, f);
+
+        // Operator & (Intersection)
+        // [0, 10) & [5, 15) = [5, 10)
+        IntervalSet<T> g = a & b;
+        EXPECT_THAT(GetIntervals(g), ::testing::ElementsAre(Interval(5, 10)));
+
+        // Operator &=
+        IntervalSet<T> h = a;
+        h &= b;
+        EXPECT_EQ(g, h);
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, Equality)
+    {
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        IntervalSet<T> a;
+        a.Insert(Interval(0, 10));
+        a.Insert(Interval(20, 30));
+        IntervalSet<T> b;
+        b.Insert(Interval(20, 30));
+        b.Insert(Interval(0, 10)); // Insert order diff
+        IntervalSet<T> c;
+        c.Insert(Interval(0, 10));
+
+        EXPECT_TRUE(a == b);
+        EXPECT_FALSE(a == c);
+        EXPECT_FALSE(a != b);
+        EXPECT_TRUE(a != c);
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, ReverseIterator)
+    {
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        IntervalSet<T> set;
+        set.Insert(Interval(0, 10));
+        set.Insert(Interval(20, 30));
+        set.Insert(Interval(40, 50));
+
+        std::vector<Interval> reversed;
+        for (auto it = set.rbegin(); it != set.rend(); ++it)
+        {
+            reversed.push_back(*it);
+        }
+
+        EXPECT_THAT(reversed, ::testing::ElementsAre(
+                        Interval(40, 50), Interval(20, 30), Interval(0, 10)));
+    }
+
+    class IntervalSetEpsilonTest : public ::testing::Test
+    {
+    };
+
+    TEST_F(IntervalSetEpsilonTest, InsertWithTolerance)
+    {
+        // Test specifically for floats where strict adjacency usually fails
+        using Interval = ClosedOpenInterval<float>;
+        IntervalSet<float> set;
+
+        set.Insert(Interval(0.0f, 1.0f));
+
+        // Gap is 0.1. Epsilon is 0.05. Should NOT merge.
+        set.Insert(Interval(1.1f, 2.0f), 0.05f);
+        EXPECT_EQ(set.size(), 2);
+
+        // Gap is 0.1. Epsilon is 0.15. Should merge.
+        // [0, 1) and [1.1, 2.0) with eps 0.15 treats gap 0.1 as adjacent
+        set.clear();
+        set.Insert(Interval(0.0f, 1.0f));
+        set.Insert(Interval(1.1f, 2.0f), 0.15f);
+
+        EXPECT_EQ(set.size(), 1);
+        // Resulting interval should cover the gap -> [0.0, 2.0)
+        auto it = set.begin();
+        EXPECT_FLOAT_EQ(it->GetStart(), 0.0f);
+        EXPECT_FLOAT_EQ(it->GetEnd(), 2.0f);
+    }
+
+    TEST_F(IntervalSetEpsilonTest, EraseWithTolerance)
+    {
+        using Interval = ClosedOpenInterval<double>;
+        IntervalSet<double> set;
+
+        set.Insert(Interval(0.0, 10.0));
+
+        // Strictly, [10.01, 11.0] does not intersect [0, 10].
+        // With epsilon 0.02, it should be considered touching/intersecting logic depending on implementation.
+        // The implementation sub_with_floor(start, eps) expands the search window.
+
+        // Let's try to erase a "point" roughly.
+        // Interval [5.0, 5.0000001) might be empty/ignored,
+        // but Interval(5, 6) strictly intersects.
+
+        // Scenario: Two intervals separated by small gap, erase bridging them.
+        set.clear();
+        set.Insert(Interval(0.0, 1.0));
+        set.Insert(Interval(1.001, 2.0));
+
+        // Verify they are separate initially
+        EXPECT_EQ(set.size(), 2);
+
+        // Erase the gap with tolerance.
+        // Erase interval is [0.9, 1.1].
+        // With epsilon 0, it touches 0.9-1.0 (overlaps [0,1)) and 1.001-1.1 (overlaps [1.001, 2)).
+        set.Erase(Interval(0.9, 1.1));
+
+        EXPECT_EQ(set.size(), 2);
+        EXPECT_DOUBLE_EQ(set.begin()->GetEnd(), 0.9);
+        EXPECT_DOUBLE_EQ(std::next(set.begin())->GetStart(), 1.1);
+    }
+
+    TEST_F(IntervalSetEpsilonTest, ContainsValueWithTolerance)
+    {
+        IntervalSet<float> set;
+        set.Insert(ClosedOpenInterval<float>(10.0f, 20.0f));
+
+        // Strictly 9.9 is outside.
+        EXPECT_FALSE(set.Contains(9.9f));
+
+        // With epsilon 0.2, 9.9 is close enough to 10.0?
+        // Logic check: sub_with_floor(9.9, 0.2) -> 9.7.
+        // Candidate search finds [10, 20).
+        // Interval::Contains(val, eps) -> 10.0 <= 9.9 + 0.2? Yes (10 <= 10.1).
+        EXPECT_TRUE(set.Contains(9.9f, 0.2f));
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, EngulfingMerge)
+    {
+        // Create many small fragmented intervals
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+        IntervalSet<T> set;
+
+        for (int i = 0; i < 100; i += 2)
+        {
+            set.Insert(Interval(static_cast<T>(i), static_cast<T>(i + 1)));
+        }
+        EXPECT_EQ(set.size(), 50);
+
+        // Insert one giant interval that covers them all plus gaps
+        set.Insert(Interval(0, 100));
+        EXPECT_THAT(GetIntervals(set), ::testing::ElementsAre(Interval(0, 100)));
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, EngulfingErase)
+    {
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+        IntervalSet<T> set;
+        set.Insert(Interval(0, 100));
+
+        // Punch holes
+        for (int i = 10; i < 90; i += 10)
+        {
+            set.Erase(Interval(static_cast<T>(i), static_cast<T>(i + 1)));
+        }
+        // We removed [10,11), [20,21)... [80,81)
+        // 8 holes created. Original 1 interval becomes 9 intervals.
+        EXPECT_EQ(set.size(), 9);
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, MoveConstruction)
+    {
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        IntervalSet<T, IntervalSetStorage::kVector> source;
+        source.Insert(Interval(static_cast<T>(0), static_cast<T>(10)));
+        source.Insert(Interval(static_cast<T>(20), static_cast<T>(30)));
+
+        // Verify source state before move
+        ASSERT_FALSE(source.IsEmpty());
+
+        // Move Construct
+        IntervalSet<T, IntervalSetStorage::kVector> dest(std::move(source));
+
+        // Source should be empty (valid but unspecified state, usually empty for vector)
+        EXPECT_TRUE(source.IsEmpty());
+        EXPECT_EQ(dest.size(), 2);
+        EXPECT_THAT(GetIntervals(dest), ::testing::ElementsAre(
+                        Interval(static_cast<T>(0), static_cast<T>(10)),
+                        Interval(static_cast<T>(20), static_cast<T>(30))
+                    ));
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, MoveAssignment)
+    {
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        IntervalSet<T, IntervalSetStorage::kVector> source;
+        source.Insert(Interval(static_cast<T>(0), static_cast<T>(10)));
+
+        IntervalSet<T, IntervalSetStorage::kVector> dest;
+        dest.Insert(Interval(static_cast<T>(100), static_cast<T>(110)));
+
+        // Move Assign
+        dest = std::move(source);
+
+        EXPECT_TRUE(source.IsEmpty());
+        EXPECT_EQ(dest.size(), 1);
+        EXPECT_THAT(GetIntervals(dest), ::testing::ElementsAre(
+                        Interval(static_cast<T>(0), static_cast<T>(10))
+                    ));
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, SelfUnion)
+    {
+        // A + A = A
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+        IntervalSet<T> set;
+        set.Insert(Interval(0, 10));
+        set.Insert(Interval(20, 30));
+
+        // Copy for verification
+        IntervalSet<T> original = set;
+
+        set += set;
+
+        EXPECT_EQ(set.size(), 2);
+        EXPECT_EQ(set, original);
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, SelfIntersection)
+    {
+        // A & A = A
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+        IntervalSet<T> set;
+        set.Insert(Interval(0, 10));
+        set.Insert(Interval(20, 30));
+
+        IntervalSet<T> original = set;
+
+        set &= set;
+
+        EXPECT_EQ(set, original);
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, SelfDifference)
+    {
+        // A - A = Empty
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+        IntervalSet<T> set;
+        set.Insert(Interval(0, 10));
+        set.Insert(Interval(20, 30));
+
+        set -= set;
+
+        EXPECT_TRUE(set.IsEmpty());
+        EXPECT_EQ(set.size(), 0);
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, TheZipperMerge)
+    {
+        // "The Zipper": Create high fragmentation, then fill the gaps.
+        // Step 1: [0,1), [2,3), [4,5) ...
+        // Step 2: Insert [1,2), [3,4) ...
+        // Result should be one massive interval [0, N)
+
+        //
+
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+        IntervalSet<T, IntervalSetStorage::kVector> set;
+
+        // Use a smaller N for slower debug builds, larger for release
+        const T n = static_cast<T>(1000);
+
+        // 1. Create fragmentation
+        for (int i = 0; i < n; i += 2)
+        {
+            set.Insert(Interval(static_cast<T>(i), static_cast<T>(i + 1)));
+        }
+        // Should have N/2 intervals
+        ASSERT_EQ(set.size(), static_cast<size_t>(n / 2));
+
+        // 2. Fill the gaps (zipping)
+        for (int i = 1; i < n; i += 2)
+        {
+            set.Insert(Interval(static_cast<T>(i), static_cast<T>(i + 1)));
+        }
+
+        // 3. Verification
+        ASSERT_EQ(set.size(), 1);
+        EXPECT_EQ(set.begin()->GetStart(), static_cast<T>(0));
+        EXPECT_EQ(set.begin()->GetEnd(), n);
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, NumericLimitsEdges)
+    {
+        // Validates that we don't overflow when checking adjacency at type boundaries
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+
+        if constexpr (std::is_integral_v<T>)
+        {
+            IntervalSet<T> set;
+            T min = std::numeric_limits<T>::min();
+            T max = std::numeric_limits<T>::max();
+
+            // Insert interval at absolute minimum
+            set.Insert(Interval(min, min + 10));
+            EXPECT_TRUE(set.Contains(min));
+
+            // Insert interval at absolute maximum (safe range for closed-open is [max-10, max))
+            // Note: ClosedOpenInterval usually asserts start < end.
+            // [max, max) is empty. [max-10, max) is valid.
+            set.Insert(Interval(max - 10, max));
+            EXPECT_TRUE(set.Contains(max - 1));
+            EXPECT_FALSE(set.Contains(max)); // 'max' is the open end bound
+
+            EXPECT_EQ(set.size(), 2);
+        }
+    }
+
+    TYPED_TEST(IntervalSetVectorTypedTest, RandomizedDisjointInvariant)
+    {
+        // Fuzz-lite: Perform random operations and assert strict invariants after every step.
+        // 1. Sorted property
+        // 2. Disjoint property (end of A <= start of B)
+        // 3. Non-adjacent property (end of A < start of B)
+
+        using T = TypeParam;
+        using Interval = ClosedOpenInterval<T>;
+        IntervalSet<T> set;
+
+        // Random number generator
+        std::mt19937 rng(42); // NOLINT(*-msc51-cpp)
+        // Limit range to ensure frequent overlaps/merges
+        std::uniform_int_distribution<int> dist_val(0, 100);
+        std::uniform_int_distribution<int> dist_len(1, 20);
+        std::uniform_int_distribution<int> dist_op(0, 1); // 0 = Insert, 1 = Erase
+
+        for (int i = 0; i < 500; ++i)
+        {
+            T start = static_cast<T>(dist_val(rng));
+            T end = start + static_cast<T>(dist_len(rng));
+            Interval iv(start, end);
+
+            if (dist_op(rng) == 0)
+            {
+                set.Insert(iv);
+            }
+            else
+            {
+                set.Erase(iv);
+            }
+
+            // Invariant Check
+            if (set.size() > 1)
+            {
+                auto it = set.begin();
+                auto next_it = std::next(it);
+                while (next_it != set.end())
+                {
+                    // Must be sorted
+                    EXPECT_LT(it->GetStart(), next_it->GetStart()) << "Unsorted intervals at step " << i;
+                    // Must be disjoint AND non-adjacent
+                    // (If they were adjacent [0,1) and [1,2), they should have merged)
+                    EXPECT_LT(it->GetEnd(), next_it->GetStart())
+                        << "Adjacent or overlapping intervals found at step " << i;
+
+                    it = next_it;
+                    ++next_it;
+                }
+            }
+        }
     }
 }

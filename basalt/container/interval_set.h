@@ -27,6 +27,8 @@
 #include <algorithm>
 #include <utility>
 #include <optional>
+#include <ranges>
+#include <concepts>
 #include <type_traits>
 #include "absl/container/btree_set.h"
 #include "basalt/math/interval.h"
@@ -36,7 +38,10 @@ namespace bslt
     /// @brief Defines the underlying storage type for an IntervalSet.
     enum class IntervalSetStorage
     {
+        /// @brief Use a std::vector as the underlying storage.
         kVector,
+
+        /// @brief Use an absl::btree_set as the underlying storage.
         kBTree,
     };
 
@@ -74,11 +79,27 @@ namespace bslt
         /// @brief The underlying container type.
         using container_type = std::vector<IntervalType>;
         /// @brief A non-const iterator to the underlying container.
-        using iterator = container_type::iterator;
+        using iterator = container_type::const_iterator;
         /// @brief A const iterator to the underlying container.
         using const_iterator = container_type::const_iterator;
         /// @brief The size type.
         using size_type = container_type::size_type;
+        /// @brief The standard value type definition.
+        using value_type = IntervalType;
+        /// @brief The standard difference type definition.
+        using difference_type = container_type::difference_type;
+        /// @brief The standard pointer type definition.
+        using pointer = container_type::const_pointer;
+        /// @brief The standard const pointer type definition.
+        using const_pointer = container_type::const_pointer;
+        /// @brief The standard reference type definition.
+        using reference = container_type::const_reference;
+        /// @brief The standard const reference type definition.
+        using const_reference = container_type::const_reference;
+        /// @brief A reverse iterator to the underlying container.
+        using reverse_iterator = container_type::const_reverse_iterator;
+        /// @brief A const reverse iterator to the underlying container.
+        using const_reverse_iterator = container_type::const_reverse_iterator;
 
         /// @brief Constructs an empty IntervalSet.
         constexpr BASALT_FORCE_INLINE IntervalSet() noexcept = default;
@@ -89,6 +110,72 @@ namespace bslt
         explicit BASALT_FORCE_INLINE IntervalSet(const size_type capacity)
         {
             m_intervals.reserve(capacity);
+        }
+
+        /// @brief Constructs an IntervalSet from a range of intervals.
+        ///
+        /// Performs a bulk load optimization: collects all intervals, sorts them,
+        /// and performs a single-pass merge. This is O(N log N) compared to O(N^2)
+        /// for repeated insertion into a vector.
+        ///
+        /// @param r A range.
+        template <std::ranges::input_range R>
+            requires std::convertible_to<std::ranges::range_value_t<R>, IntervalType>
+        explicit IntervalSet(R&& r)
+        {
+            if constexpr (std::ranges::sized_range<R>)
+            {
+                m_intervals.reserve(std::ranges::size(r));
+            }
+
+            for (auto&& interval : r)
+            {
+                if (!interval.IsEmpty())
+                {
+                    m_intervals.push_back(interval);
+                }
+            }
+
+            if (m_intervals.empty())
+            {
+                return;
+            }
+
+            std::ranges::sort(m_intervals, [](const IntervalType& a, const IntervalType& b)
+            {
+                return a.GetStart() < b.GetStart();
+            });
+
+            size_type write_idx = 0;
+            for (size_type read_idx = 1; read_idx < m_intervals.size(); ++read_idx)
+            {
+                if (m_intervals[write_idx].IntersectsOrAdjacent(m_intervals[read_idx]))
+                {
+                    m_intervals[write_idx] = m_intervals[write_idx].Combine(m_intervals[read_idx]);
+                }
+                else
+                {
+                    ++write_idx;
+                    if (write_idx != read_idx)
+                    {
+                        m_intervals[write_idx] = m_intervals[read_idx];
+                    }
+                }
+            }
+            m_intervals.erase(m_intervals.begin() + write_idx + 1, m_intervals.end());
+        }
+
+        /// @brief Inserts a range of intervals into the set.
+        ///
+        /// @tparam R A range satisfying std::ranges::input_range.
+        template <std::ranges::input_range R>
+            requires std::convertible_to<std::ranges::range_value_t<R>, IntervalType>
+        void InsertRange(R&& r)
+        {
+            for (auto&& interval : r)
+            {
+                Insert(interval);
+            }
         }
 
         /// @brief Returns a constant iterator to the beginning of the set.
@@ -121,6 +208,50 @@ namespace bslt
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator cend() const noexcept
         {
             return m_intervals.cend();
+        }
+
+        /// @brief Returns a reverse iterator to the beginning of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rbegin() const noexcept
+        {
+            return m_intervals.rbegin();
+        }
+
+        /// @brief Returns a reverse iterator to the end of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rend() const noexcept
+        {
+            return m_intervals.rend();
+        }
+
+        /// @brief Returns a constant reverse iterator to the beginning of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator crbegin() const noexcept
+        {
+            return m_intervals.crbegin();
+        }
+
+        /// @brief Returns a constant reverse iterator to the end of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator crend() const noexcept
+        {
+            return m_intervals.crend();
+        }
+
+        [[nodiscard]] BASALT_FORCE_INLINE const_iterator begin() noexcept
+        {
+            return m_intervals.begin();
+        }
+
+        [[nodiscard]] BASALT_FORCE_INLINE const_iterator end() noexcept
+        {
+            return m_intervals.end();
+        }
+
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rbegin() noexcept
+        {
+            return m_intervals.rbegin();
+        }
+
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rend() noexcept
+        {
+            return m_intervals.rend();
         }
 
         /// @brief Checks if the set is empty.
@@ -157,7 +288,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(new_interval.GetStart());
+            auto it = find_first_candidate_mutable(new_interval.GetStart());
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -196,7 +327,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(sub_with_floor(new_interval.GetStart(), epsilon));
+            auto it = find_first_candidate_mutable(sub_with_floor(new_interval.GetStart(), epsilon));
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -239,7 +370,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(interval_to_remove.GetStart());
+            auto it = find_first_candidate_mutable(interval_to_remove.GetStart());
             if (it == m_intervals.end() || !interval_to_remove.Intersects(*it))
             {
                 return;
@@ -326,7 +457,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(sub_with_floor(interval_to_remove.GetStart(), epsilon));
+            auto it = find_first_candidate_mutable(sub_with_floor(interval_to_remove.GetStart(), epsilon));
             if (it == m_intervals.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
                 return;
@@ -594,44 +725,54 @@ namespace bslt
                 return;
             }
 
-            auto it_keep = find_first_candidate(boundary.GetStart());
-            m_intervals.erase(m_intervals.begin(), it_keep);
+            auto it_first = find_first_candidate_mutable(boundary.GetStart());
 
-            auto comp_start = [](const IntervalType& i, ValueType v)
+            constexpr auto comp_start = [](const IntervalType& i, ValueType v)
             {
                 return i.GetStart() < v;
             };
-            auto it_erase = std::lower_bound(m_intervals.begin(), m_intervals.end(), boundary.GetEnd(), comp_start);
-            m_intervals.erase(it_erase, m_intervals.end());
+            auto it_last = std::lower_bound(m_intervals.begin(), m_intervals.end(), boundary.GetEnd(), comp_start);
 
-            if (m_intervals.empty())
+            if (it_first == m_intervals.end() || it_first >= it_last)
             {
+                clear();
                 return;
             }
 
-            auto opt_i_first = m_intervals.front().Intersection(boundary);
-            if (opt_i_first.has_value())
+            if (it_first != m_intervals.begin())
             {
-                m_intervals.front() = *opt_i_first;
+                auto new_end = std::move(it_first, it_last, m_intervals.begin());
+                m_intervals.erase(new_end, m_intervals.end());
             }
             else
             {
-                m_intervals.erase(m_intervals.begin());
+                m_intervals.erase(it_last, m_intervals.end());
             }
 
-            if (m_intervals.empty())
+            if (!m_intervals.empty())
             {
-                return;
+                auto opt_first = m_intervals.front().Intersection(boundary);
+                if (opt_first.has_value())
+                {
+                    m_intervals.front() = *opt_first;
+                }
+                else
+                {
+                    m_intervals.erase(m_intervals.begin());
+                }
             }
 
-            auto opt_i_last = m_intervals.back().Intersection(boundary);
-            if (opt_i_last.has_value())
+            if (!m_intervals.empty())
             {
-                m_intervals.back() = *opt_i_last;
-            }
-            else
-            {
-                m_intervals.erase(std::prev(m_intervals.end()));
+                auto opt_last = m_intervals.back().Intersection(boundary);
+                if (opt_last.has_value())
+                {
+                    m_intervals.back() = *opt_last;
+                }
+                else
+                {
+                    m_intervals.pop_back();
+                }
             }
         }
 
@@ -717,7 +858,7 @@ namespace bslt
         /// @param v The value to check.
         /// @param epsilon The tolerance value.
         /// @return \c true if the value is contained within epsilon, \c false otherwise.
-        [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v, const ValueType epsilon) const noexcept
+        [[nodiscard]] bool Contains(ValueType v, const ValueType epsilon) const noexcept
         {
             auto candidate = find_candidate_for_value(v);
             if (candidate != m_intervals.end())
@@ -740,7 +881,7 @@ namespace bslt
         ///
         /// @param other The interval to check.
         /// @return \c true if the interval is a subset of the set, \c false otherwise.
-        [[nodiscard]] BASALT_FORCE_INLINE bool ContainsInterval(const IntervalType& other) const noexcept
+        [[nodiscard]] bool ContainsInterval(const IntervalType& other) const noexcept
         {
             if (other.IsEmpty())
             {
@@ -759,8 +900,8 @@ namespace bslt
         /// @param other The interval to check.
         /// @param epsilon The tolerance value.
         /// @return \c true if the interval is a subset within epsilon, \c false otherwise.
-        [[nodiscard]] BASALT_FORCE_INLINE bool ContainsInterval(const IntervalType& other,
-                                                                const ValueType epsilon) const noexcept
+        [[nodiscard]] bool ContainsInterval(const IntervalType& other,
+                                            const ValueType epsilon) const noexcept
         {
             if (other.IsEmpty(epsilon))
             {
@@ -816,7 +957,11 @@ namespace bslt
             return it->Intersects(other, epsilon);
         }
 
+        friend BASALT_FORCE_INLINE bool operator==(const IntervalSet& lhs, const IntervalSet& rhs) = default;
+
     private:
+        using mutable_iterator = container_type::iterator;
+
         /// @brief Subtracts rhs from lhs with floor at zero for unsigned types.
         ///
         /// @param lhs The left-hand side value.
@@ -836,11 +981,7 @@ namespace bslt
             }
         }
 
-        /// @brief Finds the first interval `it` such that `it.GetEnd() >= v`. (non-const)
-        ///
-        /// @param v The value to search for.
-        /// @return An iterator to the first candidate, or `end()`.
-        BASALT_FORCE_INLINE iterator find_first_candidate(ValueType v) noexcept
+        BASALT_FORCE_INLINE mutable_iterator find_first_candidate_mutable(ValueType v) noexcept
         {
             constexpr auto comp = [](const IntervalType& i, ValueType value)
             {
@@ -946,8 +1087,25 @@ namespace bslt
         using container_type = absl::btree_set<IntervalType, ClosedOpenIntervalComparer>;
         /// @brief A const iterator to the underlying container.
         using const_iterator = container_type::const_iterator;
+        using iterator = container_type::const_iterator;
         /// @brief The size type.
         using size_type = container_type::size_type;
+        /// @brief The standard value type definition for range compatibility.
+        using value_type = IntervalType;
+        /// @brief The difference type.
+        using difference_type = container_type::difference_type;
+        /// @brief The pointer type.
+        using pointer = container_type::const_pointer;
+        /// @brief The const pointer type.
+        using const_pointer = container_type::const_pointer;
+        /// @brief The reference type.
+        using reference = container_type::const_reference;
+        /// @brief The const reference type.
+        using const_reference = container_type::const_reference;
+        /// @brief The reverse iterator type.
+        using reverse_iterator = container_type::const_reverse_iterator;
+        /// @brief The const reverse iterator type.
+        using const_reverse_iterator = container_type::const_reverse_iterator;
 
         /// @brief Constructs an empty IntervalSet.
         constexpr BASALT_FORCE_INLINE IntervalSet() noexcept = default;
@@ -960,6 +1118,30 @@ namespace bslt
         /// @param capacity The expected number of intervals.
         explicit BASALT_FORCE_INLINE IntervalSet([[maybe_unused]] const size_type capacity)
         {
+        }
+
+        /// @brief Constructs an IntervalSet from a range of intervals.
+        template <std::ranges::input_range R>
+            requires std::convertible_to<std::ranges::range_value_t<R>, IntervalType>
+        explicit IntervalSet(R&& r)
+        {
+            for (auto&& interval : r)
+            {
+                Insert(interval);
+            }
+        }
+
+        /// @brief Inserts a range of intervals into the set.
+        ///
+        /// @tparam R A range satisfying std::ranges::input_range.
+        template <std::ranges::input_range R>
+            requires std::convertible_to<std::ranges::range_value_t<R>, IntervalType>
+        void InsertRange(R&& r)
+        {
+            for (auto&& interval : r)
+            {
+                Insert(interval);
+            }
         }
 
         /// @brief Returns a constant iterator to the beginning of the set.
@@ -992,6 +1174,54 @@ namespace bslt
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator cend() const noexcept
         {
             return m_intervals.cend();
+        }
+
+        /// @brief Returns a reverse iterator to the beginning of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rbegin() const noexcept
+        {
+            return m_intervals.rbegin();
+        }
+
+        /// @brief Returns a reverse iterator to the end of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rend() const noexcept
+        {
+            return m_intervals.rend();
+        }
+
+        /// @brief Returns a constant reverse iterator to the beginning of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator crbegin() const noexcept
+        {
+            return m_intervals.crbegin();
+        }
+
+        /// @brief Returns a constant reverse iterator to the end of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator crend() const noexcept
+        {
+            return m_intervals.crend();
+        }
+
+        /// @brief Returns a non-const iterator to the beginning of the set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_iterator begin() noexcept
+        {
+            return m_intervals.begin();
+        }
+
+        /// @brief Returns a non-const iterator to the end of the set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_iterator end() noexcept
+        {
+            return m_intervals.end();
+        }
+
+        /// @brief Returns a reverse iterator to the beginning of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rbegin() noexcept
+        {
+            return m_intervals.rbegin();
+        }
+
+        /// @brief Returns a reverse iterator to the end of the reversed set.
+        [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rend() noexcept
+        {
+            return m_intervals.rend();
         }
 
         /// @brief Checks if the set is empty.
@@ -1609,6 +1839,11 @@ namespace bslt
             }
 
             return it->Intersects(other, epsilon);
+        }
+
+        friend BASALT_FORCE_INLINE bool operator==(const IntervalSet& lhs, const IntervalSet& rhs)
+        {
+            return lhs.m_intervals == rhs.m_intervals;
         }
 
     private:
