@@ -19,6 +19,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include <functional>
 #include "basalt/math/interval.h"
 #include "gtest/gtest.h"
 #include "absl/hash/hash.h"
@@ -1366,10 +1367,6 @@ namespace bslt::test
         EXPECT_EQ(res4, OpenInterval<T>(T{0}, T{20}));
     }
 
-    // =========================================================================
-    // General and Cross-Type Tests
-    // =========================================================================
-
     class IntervalTest : public ::testing::Test
     {
     };
@@ -1624,25 +1621,69 @@ namespace bslt::test
     // Explicit tests for different interval types to ensure template coverage
     TEST_F(IntervalTest, EpsilonOverloadsDifferentTypes)
     {
-        double eps = 0.1;
+        constexpr double eps = 0.1;
 
         // OpenClosed (10, 20]
-        OpenClosedInterval<double> oc(10.0, 20.0);
+        const OpenClosedInterval<double> oc(10.0, 20.0);
         // Check near start (9.95 is outside strict, inside with eps)
         EXPECT_TRUE(oc.Contains(9.95, eps));
         // Check near end (20.05 is outside strict, inside with eps)
         EXPECT_TRUE(oc.Contains(20.05, eps));
 
         // Closed [10, 20]
-        ClosedInterval<double> c(10.0, 20.0);
+        const ClosedInterval<double> c(10.0, 20.0);
         // Adjacent with gap
-        ClosedInterval<double> c_gap(20.05, 30.0);
+        const ClosedInterval<double> c_gap(20.05, 30.0);
         EXPECT_TRUE(c.Adjacent(c_gap, eps));
 
         // Open (10, 20)
-        OpenInterval<double> o(10.0, 20.0);
+        const OpenInterval<double> o(10.0, 20.0);
         // Intersection with gap
-        OpenInterval<double> o_gap(20.05, 30.0);
+        const OpenInterval<double> o_gap(20.05, 30.0);
         EXPECT_TRUE(o.Intersects(o_gap, eps));
+    }
+
+    TEST_F(IntervalTest, StdHash)
+    {
+        // ClosedOpenInterval
+        {
+            using IntervalT = ClosedOpenInterval<int>;
+            std::hash<IntervalT> hasher;
+            IntervalT i1(0, 10);
+            IntervalT i2(0, 10);
+            IntervalT i3(0, 11);
+            EXPECT_EQ(hasher(i1), hasher(i2));
+            EXPECT_NE(hasher(i1), hasher(i3));
+        }
+        // OpenClosedInterval
+        {
+            using IntervalT = OpenClosedInterval<int>;
+            std::hash<IntervalT> hasher;
+            IntervalT i1(0, 10);
+            IntervalT i2(0, 10);
+            IntervalT i3(0, 11);
+            EXPECT_EQ(hasher(i1), hasher(i2));
+            EXPECT_NE(hasher(i1), hasher(i3));
+        }
+        // ClosedInterval
+        {
+            using IntervalT = ClosedInterval<int>;
+            std::hash<IntervalT> hasher;
+            IntervalT i1(0, 10);
+            IntervalT i2(0, 10);
+            IntervalT i3(0, 11);
+            EXPECT_EQ(hasher(i1), hasher(i2));
+            EXPECT_NE(hasher(i1), hasher(i3));
+        }
+        // OpenInterval
+        {
+            using IntervalT = OpenInterval<int>;
+            std::hash<IntervalT> hasher;
+            IntervalT i1(0, 10);
+            IntervalT i2(0, 10);
+            IntervalT i3(0, 11);
+            EXPECT_EQ(hasher(i1), hasher(i2));
+            EXPECT_NE(hasher(i1), hasher(i3));
+        }
     }
 } // namespace bslt::test

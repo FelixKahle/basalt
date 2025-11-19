@@ -582,7 +582,7 @@ namespace bslt::test
 
         EXPECT_EQ(set.size(), 1);
         // Resulting interval should cover the gap -> [0.0, 2.0)
-        auto it = set.begin();
+        const auto it = set.begin();
         EXPECT_FLOAT_EQ(it->GetStart(), 0.0f);
         EXPECT_FLOAT_EQ(it->GetEnd(), 2.0f);
     }

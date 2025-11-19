@@ -25,8 +25,10 @@
 #include <algorithm>
 #include <optional>
 #include <concepts>
+#include <functional>
 #include <type_traits>
 #include "absl/log/check.h"
+#include "absl/hash/hash.h"
 #include "basalt/base/config.h"
 #include "basalt/type_traits/type_traits.h"
 
@@ -565,6 +567,11 @@ namespace bslt
             return !(lhs == rhs);
         }
 
+        friend std::ostream& operator<<(std::ostream& os, const ClosedOpenInterval interval)
+        {
+            return os << "[" << interval.GetStart() << ", " << interval.GetEnd() << ")";
+        }
+
         /// @brief Computes the hash value for the interval.
         ///
         /// This function is compatible with the Abseil hashing framework.
@@ -1066,6 +1073,11 @@ namespace bslt
             return !(lhs == rhs);
         }
 
+        friend std::ostream& operator<<(std::ostream& os, const OpenClosedInterval interval)
+        {
+            return os << "(" << interval.GetStart() << ", " << interval.GetEnd() << "]";
+        }
+
         /// @brief Computes the hash value for the interval.
         ///
         /// This function is compatible with the Abseil hashing framework.
@@ -1565,6 +1577,11 @@ namespace bslt
             return !(lhs == rhs);
         }
 
+        friend std::ostream& operator<<(std::ostream& os, const ClosedInterval interval)
+        {
+            return os << "[" << interval.GetStart() << ", " << interval.GetEnd() << "]";
+        }
+
         /// @brief Computes the hash value for the interval.
         ///
         /// This function is compatible with the Abseil hashing framework.
@@ -2062,6 +2079,11 @@ namespace bslt
             return !(lhs == rhs);
         }
 
+        friend std::ostream& operator<<(std::ostream& os, const OpenInterval interval)
+        {
+            return os << "(" << interval.GetStart() << ", " << interval.GetEnd() << ")";
+        }
+
         /// @brief Computes the hash value for the interval.
         ///
         /// This function is compatible with the Abseil hashing framework.
@@ -2096,6 +2118,45 @@ namespace bslt
         T start_exclusive_;
         T end_exclusive_;
     };
-}
+} // namespace bslt
+
+namespace std
+{
+    template <typename T>
+    struct hash<bslt::ClosedOpenInterval<T>>
+    {
+        BASALT_FORCE_INLINE size_t operator()(const bslt::ClosedOpenInterval<T> interval) const noexcept
+        {
+            return absl::Hash<bslt::ClosedOpenInterval<T>>{}(interval);
+        }
+    };
+
+    template <typename T>
+    struct hash<bslt::OpenClosedInterval<T>>
+    {
+        BASALT_FORCE_INLINE size_t operator()(const bslt::OpenClosedInterval<T> interval) const noexcept
+        {
+            return absl::Hash<bslt::OpenClosedInterval<T>>{}(interval);
+        }
+    };
+
+    template <typename T>
+    struct hash<bslt::ClosedInterval<T>>
+    {
+        BASALT_FORCE_INLINE size_t operator()(const bslt::ClosedInterval<T> interval) const noexcept
+        {
+            return absl::Hash<bslt::ClosedInterval<T>>{}(interval);
+        }
+    };
+
+    template <typename T>
+    struct hash<bslt::OpenInterval<T>>
+    {
+        BASALT_FORCE_INLINE size_t operator()(const bslt::OpenInterval<T> interval) const noexcept
+        {
+            return absl::Hash<bslt::OpenInterval<T>>{}(interval);
+        }
+    };
+} // namespace std
 
 #endif // BASALT_MATH_INTERVAL_H_

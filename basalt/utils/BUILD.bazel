@@ -23,54 +23,26 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 cc_library(
-    name = "math",
+    name = "typed_index",
     hdrs = [
-        "math.h",
+        "typed_index.h",
     ],
-    visibility = ["//visibility:public"],
     deps = [
         "//basalt/base:config",
         "//basalt/type_traits",
         "@abseil-cpp//absl/hash:hash",
-        "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/strings:str_format",
         "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
 cc_test(
-    name = "math_test",
-    srcs = ["math_test.cc"],
-    deps = [
-        ":math",
-        "@googletest//:gtest",
-        "@googletest//:gtest_main",
+    name = "typed_index_test",
+    srcs = [
+        "typed_index_test.cc",
     ],
-)
-
-cc_library(
-    name = "interval",
-    hdrs = [
-        "interval.h",
-    ],
-    visibility = ["//visibility:public"],
     deps = [
-        ":math",
-        "//basalt/type_traits",
-        "@abseil-cpp//absl/container:btree",
-        "@abseil-cpp//absl/hash:hash",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/log:log",
-        "@abseil-cpp//absl/strings:str_format",
-        "@abseil-cpp//absl/strings:string_view",
-    ],
-)
-
-cc_test(
-    name = "interval_test",
-    srcs = ["interval_test.cc"],
-    deps = [
-        ":interval",
+        ":typed_index",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
