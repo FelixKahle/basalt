@@ -24,14 +24,30 @@
 #ifndef BASALT_UTILS_BIT_H_
 #define BASALT_UTILS_BIT_H_
 
+#ifndef BASALT_USE_STD_BIT
+#if defined(__cpp_lib_bitops)
+#define BASALT_USE_STD_BIT 1
+#elif defined(__cplusplus) && __cplusplus >= 202002L
+#define BASALT_USE_STD_BIT 1
+#else
+#define BASALT_USE_STD_BIT 0
+#endif // defined(__cpp_lib_bitops)
+#endif // BASALT_USE_STD_BIT
+
+#if !BASALT_USE_STD_BIT
+#warning "Using custom bit operations implementation. Consider enabling C++20 or later for std::bit support."
+#endif // !BASALT_USE_STD_BIT
+
+#include <type_traits>
+#include <cstdint>
+#if BASALT_USE_STD_BIT
+#include <bit>
+#endif // BASALT_USE_STD_BIT
 #include "basalt/base/config.h"
 #if defined(_MSC_VER)
 #include <intrin.h>
 #endif // defined(_MSC_VER)
 #include "absl/log/check.h"
-
-#include <type_traits>
-#include <cstdint>
 
 namespace bslt::bits
 {
@@ -136,6 +152,9 @@ namespace bslt::bits
     /// @return The number of bits set to 1.
     constexpr BASALT_FORCE_INLINE uint64_t BitCount64(uint64_t n) noexcept
     {
+#if BASALT_USE_STD_BIT
+        return static_cast<uint64_t>(std::popcount(n));
+#else
         constexpr auto m1 = uint64_t{0x5555555555555555};
         constexpr auto m2 = uint64_t{0x3333333333333333};
         constexpr auto m4 = uint64_t{0x0F0F0F0F0F0F0F0F};
@@ -145,6 +164,7 @@ namespace bslt::bits
         n = (n + (n >> 4)) & m4;
         n = (n * h01) >> 56;
         return n;
+#endif
     }
 
     /// @brief Calculates the population count (number of set bits) in a 32-bit integer.
@@ -153,12 +173,16 @@ namespace bslt::bits
     /// @return The number of bits set to 1.
     constexpr BASALT_FORCE_INLINE uint32_t BitCount32(uint32_t n) noexcept
     {
+#if BASALT_USE_STD_BIT
+        return static_cast<uint32_t>(std::popcount(n));
+#else
         n -= (n >> 1) & 0x55555555UL;
         n = (n & 0x33333333) + ((n >> 2) & 0x33333333UL);
         n = (n + (n >> 4)) & 0x0F0F0F0FUL;
         n = n + (n >> 8);
         n = n + (n >> 16);
         return n & 0x0000003FUL;
+#endif // BASALT_USE_STD_BIT
     }
 
     /// @brief Calculates the population count (number of set bits) in a 16-bit integer.
@@ -167,10 +191,14 @@ namespace bslt::bits
     /// @return The number of bits set to 1.
     constexpr BASALT_FORCE_INLINE uint16_t BitCount16(uint16_t n) noexcept
     {
+#if BASALT_USE_STD_BIT
+        return static_cast<uint16_t>(std::popcount(n));
+#else
         n -= (n >> 1) & 0x5555U;
         n = (n & 0x3333U) + ((n >> 2) & 0x3333U);
         n = (n + (n >> 4)) & 0x0F0FU;
         return static_cast<uint16_t>((n + (n >> 8)) & 0x001FU);
+#endif // BASALT_USE_STD_BIT
     }
 
     /// @brief Calculates the population count (number of set bits) in an 8-bit integer.
@@ -179,9 +207,13 @@ namespace bslt::bits
     /// @return The number of bits set to 1.
     constexpr BASALT_FORCE_INLINE uint8_t BitCount8(uint8_t n) noexcept
     {
+#if BASALT_USE_STD_BIT
+        return static_cast<uint8_t>(std::popcount(n));
+#else
         n = static_cast<uint8_t>(n - ((n >> 1) & 0x55U));
         n = static_cast<uint8_t>((n & 0x33U) + ((n >> 2) & 0x33U));
         return static_cast<uint8_t>((n + (n >> 4)) & 0x0FU);
+#endif // BASALT_USE_STD_BIT
     }
 
     /// @brief Isolates the least significant bit of a 64-bit integer.
@@ -272,7 +304,9 @@ namespace bslt::bits
     {
         DCHECK_NE(value, 0ULL) << "LSB position is undefined for value 0";
 
-#if defined(__GNUC__) || defined(__llvm__)
+#if BASALT_USE_STD_BIT
+        return static_cast<uint64_t>(std::countr_zero(value));
+#elif defined(__GNUC__) || defined(__llvm__)
         return __builtin_ctzll(value);
 #elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
         unsigned long index = 0;
@@ -280,7 +314,7 @@ namespace bslt::bits
         return index;
 #else
         return LeastSignificantBitPosition64DeBruijn(value);
-#endif // defined(__GNUC__) || defined(__llvm__)
+#endif
     }
 
     /// @brief Returns the index of the least significant bit set in a 32-bit integer.
@@ -292,7 +326,9 @@ namespace bslt::bits
     {
         DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
 
-#if defined(__GNUC__) || defined(__llvm__)
+#if BASALT_USE_STD_BIT
+        return static_cast<uint32_t>(std::countr_zero(value));
+#elif defined(__GNUC__) || defined(__llvm__)
         return __builtin_ctz(value);
 #elif defined(_MSC_VER)
         unsigned long index = 0;
@@ -311,7 +347,11 @@ namespace bslt::bits
     {
         DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
 
+#if BASALT_USE_STD_BIT
+        return static_cast<uint16_t>(std::countr_zero(value));
+#else
         return static_cast<uint16_t>(LeastSignificantBitPosition32(value));
+#endif // BASALT_USE_STD_BIT
     }
 
     /// @brief Returns the index of the least significant bit set in an 8-bit integer.
@@ -321,8 +361,11 @@ namespace bslt::bits
     BASALT_FORCE_INLINE uint8_t LeastSignificantBitPosition8(const uint8_t value) noexcept
     {
         DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
-
+#if BASALT_USE_STD_BIT
+        return static_cast<uint8_t>(std::countr_zero(value));
+#else
         return static_cast<uint8_t>(LeastSignificantBitPosition32(value));
+#endif // BASALT_USE_STD_BIT
     }
 
     /// @brief Generic template to find the LSB of any unsigned integer type.

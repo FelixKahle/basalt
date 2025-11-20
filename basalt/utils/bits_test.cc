@@ -21,6 +21,7 @@
 
 #include <random>
 #include <limits>
+#include <bitset>
 #include "gtest/gtest.h"
 #include "basalt/utils/bits.h"
 
