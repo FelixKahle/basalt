@@ -1485,10 +1485,6 @@ namespace bslt::test
         EXPECT_EQ(absl::StrFormat("%v", i_empty), "[0, 0)");
     }
 
-    // =========================================================================
-    // Epsilon Overload Tests
-    // =========================================================================
-
     using EpsilonTestTypes = ::testing::Types<float, double>;
 
     template <typename T>
