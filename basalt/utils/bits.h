@@ -26,18 +26,16 @@
 #if defined(_MSC_VER)
 #include <intrin.h>
 #endif
+#include "absl/log/check.h"
 
 namespace bslt::bits
 {
-    // -----------------------------------------------------------------------------
-    // LSB 64
-    // -----------------------------------------------------------------------------
     BASALT_FORCE_INLINE uint64_t LeastSignificantBitPosition64(const uint64_t value) noexcept
     {
+        DCHECK_NE(value, 0ULL) << "LSB position is undefined for value 0";
+
 #if defined(__GNUC__) || defined(__llvm__)
         return __builtin_ctzll(value);
-
-        // Only use _BitScanForward64 on 64-bit MSVC builds
 #elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
         unsigned long index = 0;
         _BitScanForward64(&index, value);
@@ -56,11 +54,10 @@ namespace bslt::bits
 #endif
     }
 
-    // -----------------------------------------------------------------------------
-    // LSB 32
-    // -----------------------------------------------------------------------------
     BASALT_FORCE_INLINE uint32_t LeastSignificantBitPosition32(const uint32_t value) noexcept
     {
+        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+
 #if defined(__GNUC__) || defined(__llvm__)
         return __builtin_ctz(value);
 
@@ -75,17 +72,17 @@ namespace bslt::bits
 #endif
     }
 
-    // -----------------------------------------------------------------------------
-    // LSB 16 & 8 (Implemented via 32-bit upcast for intrinsics)
-    // -----------------------------------------------------------------------------
     BASALT_FORCE_INLINE uint16_t LeastSignificantBitPosition16(const uint16_t value) noexcept
     {
-        // Reuse the 32-bit logic (it's faster than casting to 64 for the fallback)
+        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+
         return static_cast<uint16_t>(LeastSignificantBitPosition32(value));
     }
 
     BASALT_FORCE_INLINE uint8_t LeastSignificantBitPosition8(const uint8_t value) noexcept
     {
+        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+
         return static_cast<uint8_t>(LeastSignificantBitPosition32(value));
     }
 

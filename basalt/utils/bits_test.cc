@@ -30,8 +30,7 @@ namespace bslt::bits
         for (uint64_t i = 0; i < 64; ++i)
         {
             const uint64_t val = (1ULL << i);
-            EXPECT_EQ(LeastSignificantBitPosition64(val), i)
-            << "Failed at index " << i;
+            EXPECT_EQ(LeastSignificantBitPosition64(val), i) << "Failed at index " << i;
         }
     }
 
