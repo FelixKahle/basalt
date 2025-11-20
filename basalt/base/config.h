@@ -22,6 +22,11 @@
 #ifndef BASALT_BASE_CONFIG_H_
 #define BASALT_BASE_CONFIG_H_
 
+// We need C++ 20
+#if !defined(__cplusplus) || __cplusplus < 202002L
+#error "Basalt requires a C++20 compliant compiler."
+#endif // !defined(__cplusplus) || __cplusplus < 202002L
+
 #ifndef BASALT_CPLUSPLUS_LANG
 #if defined(_MSVC_LANG)
 #define BASALT_CPLUSPLUS_LANG _MSVC_LANG

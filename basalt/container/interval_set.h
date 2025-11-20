@@ -109,7 +109,7 @@ namespace bslt
         /// @param capacity The number of intervals to reserve space for.
         explicit BASALT_FORCE_INLINE IntervalSet(const size_type capacity)
         {
-            m_intervals.reserve(capacity);
+            intervals_.reserve(capacity);
         }
 
         /// @brief Constructs an IntervalSet from a range of intervals.
@@ -125,44 +125,44 @@ namespace bslt
         {
             if constexpr (std::ranges::sized_range<R>)
             {
-                m_intervals.reserve(std::ranges::size(r));
+                intervals_.reserve(std::ranges::size(r));
             }
 
             for (auto&& interval : r)
             {
                 if (!interval.IsEmpty())
                 {
-                    m_intervals.push_back(interval);
+                    intervals_.push_back(interval);
                 }
             }
 
-            if (m_intervals.empty())
+            if (intervals_.empty())
             {
                 return;
             }
 
-            std::ranges::sort(m_intervals, [](const IntervalType& a, const IntervalType& b)
+            std::ranges::sort(intervals_, [](const IntervalType& a, const IntervalType& b)
             {
                 return a.GetStart() < b.GetStart();
             });
 
             size_type write_idx = 0;
-            for (size_type read_idx = 1; read_idx < m_intervals.size(); ++read_idx)
+            for (size_type read_idx = 1; read_idx < intervals_.size(); ++read_idx)
             {
-                if (m_intervals[write_idx].IntersectsOrAdjacent(m_intervals[read_idx]))
+                if (intervals_[write_idx].IntersectsOrAdjacent(intervals_[read_idx]))
                 {
-                    m_intervals[write_idx] = m_intervals[write_idx].Combine(m_intervals[read_idx]);
+                    intervals_[write_idx] = intervals_[write_idx].Combine(intervals_[read_idx]);
                 }
                 else
                 {
                     ++write_idx;
                     if (write_idx != read_idx)
                     {
-                        m_intervals[write_idx] = m_intervals[read_idx];
+                        intervals_[write_idx] = intervals_[read_idx];
                     }
                 }
             }
-            m_intervals.erase(m_intervals.begin() + write_idx + 1, m_intervals.end());
+            intervals_.erase(intervals_.begin() + write_idx + 1, intervals_.end());
         }
 
         /// @brief Inserts a range of intervals into the set.
@@ -183,7 +183,7 @@ namespace bslt
         /// @return A const_iterator pointing to the first interval in the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator begin() const noexcept
         {
-            return m_intervals.begin();
+            return intervals_.begin();
         }
 
         /// @brief Returns a constant iterator to the end of the set.
@@ -191,7 +191,7 @@ namespace bslt
         /// @return A const_iterator pointing one past the last interval in the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator end() const noexcept
         {
-            return m_intervals.end();
+            return intervals_.end();
         }
 
         /// @brief Returns a constant iterator to the beginning of the set.
@@ -199,7 +199,7 @@ namespace bslt
         /// @return A const_iterator pointing to the first interval in the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator cbegin() const noexcept
         {
-            return m_intervals.cbegin();
+            return intervals_.cbegin();
         }
 
         /// @brief Returns a constant iterator to the end of the set.
@@ -207,51 +207,51 @@ namespace bslt
         /// @return A const_iterator pointing one past the last interval in the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator cend() const noexcept
         {
-            return m_intervals.cend();
+            return intervals_.cend();
         }
 
         /// @brief Returns a reverse iterator to the beginning of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rbegin() const noexcept
         {
-            return m_intervals.rbegin();
+            return intervals_.rbegin();
         }
 
         /// @brief Returns a reverse iterator to the end of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rend() const noexcept
         {
-            return m_intervals.rend();
+            return intervals_.rend();
         }
 
         /// @brief Returns a constant reverse iterator to the beginning of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator crbegin() const noexcept
         {
-            return m_intervals.crbegin();
+            return intervals_.crbegin();
         }
 
         /// @brief Returns a constant reverse iterator to the end of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator crend() const noexcept
         {
-            return m_intervals.crend();
+            return intervals_.crend();
         }
 
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator begin() noexcept
         {
-            return m_intervals.begin();
+            return intervals_.begin();
         }
 
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator end() noexcept
         {
-            return m_intervals.end();
+            return intervals_.end();
         }
 
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rbegin() noexcept
         {
-            return m_intervals.rbegin();
+            return intervals_.rbegin();
         }
 
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rend() noexcept
         {
-            return m_intervals.rend();
+            return intervals_.rend();
         }
 
         /// @brief Checks if the set is empty.
@@ -259,7 +259,7 @@ namespace bslt
         /// @return \c true if the set contains no intervals, \c false otherwise.
         [[nodiscard]] BASALT_FORCE_INLINE bool IsEmpty() const noexcept
         {
-            return m_intervals.empty();
+            return intervals_.empty();
         }
 
         /// @brief Returns the number of disjoint intervals in the set.
@@ -267,13 +267,13 @@ namespace bslt
         /// @return The number of intervals.
         [[nodiscard]] BASALT_FORCE_INLINE size_type size() const noexcept
         {
-            return m_intervals.size();
+            return intervals_.size();
         }
 
         /// @brief Clears all intervals from the set.
         BASALT_FORCE_INLINE void clear() noexcept
         {
-            m_intervals.clear();
+            intervals_.clear();
         }
 
         /// @brief Inserts a new interval into the set.
@@ -292,7 +292,7 @@ namespace bslt
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
-            while (it != m_intervals.end() && merged_interval.IntersectsOrAdjacent(*it))
+            while (it != intervals_.end() && merged_interval.IntersectsOrAdjacent(*it))
             {
                 merged_interval = merged_interval.Combine(*it);
                 ++it;
@@ -304,12 +304,12 @@ namespace bslt
                 auto erase_tail_begin = std::next(erase_start);
                 if (erase_tail_begin != it)
                 {
-                    m_intervals.erase(erase_tail_begin, it);
+                    intervals_.erase(erase_tail_begin, it);
                 }
             }
             else
             {
-                m_intervals.insert(it, merged_interval);
+                intervals_.insert(it, merged_interval);
             }
         }
 
@@ -331,7 +331,7 @@ namespace bslt
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
-            while (it != m_intervals.end() && merged_interval.IntersectsOrAdjacent(*it, epsilon))
+            while (it != intervals_.end() && merged_interval.IntersectsOrAdjacent(*it, epsilon))
             {
                 DCHECK(merged_interval.IntersectsOrAdjacent(*it, epsilon)) << "Attempting to merge disjoint intervals";
 
@@ -348,12 +348,12 @@ namespace bslt
                 auto erase_tail_begin = std::next(erase_start);
                 if (erase_tail_begin != it)
                 {
-                    m_intervals.erase(erase_tail_begin, it);
+                    intervals_.erase(erase_tail_begin, it);
                 }
             }
             else
             {
-                m_intervals.insert(it, merged_interval);
+                intervals_.insert(it, merged_interval);
             }
         }
 
@@ -371,7 +371,7 @@ namespace bslt
             }
 
             auto it = find_first_candidate_mutable(interval_to_remove.GetStart());
-            if (it == m_intervals.end() || !interval_to_remove.Intersects(*it))
+            if (it == intervals_.end() || !interval_to_remove.Intersects(*it))
             {
                 return;
             }
@@ -385,7 +385,7 @@ namespace bslt
             }
 
             auto erase_end = it;
-            while (erase_end != m_intervals.end() && interval_to_remove.Intersects(*erase_end))
+            while (erase_end != intervals_.end() && interval_to_remove.Intersects(*erase_end))
             {
                 ++erase_end;
             }
@@ -402,7 +402,7 @@ namespace bslt
                 if (first_frag.has_value() && last_frag.has_value())
                 {
                     *erase_start = *first_frag;
-                    m_intervals.insert(std::next(erase_start), *last_frag);
+                    intervals_.insert(std::next(erase_start), *last_frag);
                 }
                 else if (first_frag.has_value())
                 {
@@ -414,7 +414,7 @@ namespace bslt
                 }
                 else
                 {
-                    m_intervals.erase(erase_start);
+                    intervals_.erase(erase_start);
                 }
                 return;
             }
@@ -429,17 +429,17 @@ namespace bslt
                 auto erase_tail_begin = std::next(erase_start);
                 if (erase_tail_begin != erase_end)
                 {
-                    m_intervals.erase(erase_tail_begin, erase_end);
+                    intervals_.erase(erase_tail_begin, erase_end);
                 }
 
                 if (first_frag.has_value() && last_frag.has_value())
                 {
-                    m_intervals.insert(std::next(erase_start), *last_frag);
+                    intervals_.insert(std::next(erase_start), *last_frag);
                 }
             }
             else
             {
-                m_intervals.erase(erase_start, erase_end);
+                intervals_.erase(erase_start, erase_end);
             }
         }
 
@@ -458,7 +458,7 @@ namespace bslt
             }
 
             auto it = find_first_candidate_mutable(sub_with_floor(interval_to_remove.GetStart(), epsilon));
-            if (it == m_intervals.end() || !interval_to_remove.Intersects(*it, epsilon))
+            if (it == intervals_.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
                 return;
             }
@@ -472,7 +472,7 @@ namespace bslt
             }
 
             auto erase_end = it;
-            while (erase_end != m_intervals.end() && interval_to_remove.Intersects(*erase_end, epsilon))
+            while (erase_end != intervals_.end() && interval_to_remove.Intersects(*erase_end, epsilon))
             {
                 ++erase_end;
             }
@@ -489,7 +489,7 @@ namespace bslt
                 if (first_frag.has_value() && last_frag.has_value())
                 {
                     *erase_start = *first_frag;
-                    m_intervals.insert(std::next(erase_start), *last_frag);
+                    intervals_.insert(std::next(erase_start), *last_frag);
                 }
                 else if (first_frag.has_value())
                 {
@@ -501,7 +501,7 @@ namespace bslt
                 }
                 else
                 {
-                    m_intervals.erase(erase_start);
+                    intervals_.erase(erase_start);
                 }
                 return;
             }
@@ -516,17 +516,17 @@ namespace bslt
                 auto erase_tail_begin = std::next(erase_start);
                 if (erase_tail_begin != erase_end)
                 {
-                    m_intervals.erase(erase_tail_begin, erase_end);
+                    intervals_.erase(erase_tail_begin, erase_end);
                 }
 
                 if (first_frag.has_value() && last_frag.has_value())
                 {
-                    m_intervals.insert(std::next(erase_start), *last_frag);
+                    intervals_.insert(std::next(erase_start), *last_frag);
                 }
             }
             else
             {
-                m_intervals.erase(erase_start, erase_end);
+                intervals_.erase(erase_start, erase_end);
             }
         }
 
@@ -541,15 +541,15 @@ namespace bslt
             }
             if (this->IsEmpty())
             {
-                m_intervals = other.m_intervals;
+                intervals_ = other.intervals_;
                 return;
             }
 
             container_type new_intervals;
-            new_intervals.reserve(m_intervals.size() + other.m_intervals.size());
+            new_intervals.reserve(intervals_.size() + other.intervals_.size());
 
-            auto it_this = m_intervals.begin();
-            auto it_other = other.m_intervals.begin();
+            auto it_this = intervals_.begin();
+            auto it_other = other.intervals_.begin();
 
             std::optional<IntervalType> current_merged;
             if (it_this->GetStart() <= it_other->GetStart())
@@ -563,11 +563,11 @@ namespace bslt
                 ++it_other;
             }
 
-            while (it_this != m_intervals.end() || it_other != other.m_intervals.end())
+            while (it_this != intervals_.end() || it_other != other.intervals_.end())
             {
                 const IntervalType* next_interval = nullptr;
-                if (it_this == m_intervals.end() ||
-                    (it_other != other.m_intervals.end() && it_other->GetStart() < it_this->GetStart()))
+                if (it_this == intervals_.end() ||
+                    (it_other != other.intervals_.end() && it_other->GetStart() < it_this->GetStart()))
                 {
                     next_interval = &(*it_other);
                     ++it_other;
@@ -590,7 +590,7 @@ namespace bslt
             }
 
             new_intervals.push_back(*current_merged);
-            m_intervals = std::move(new_intervals);
+            intervals_ = std::move(new_intervals);
         }
 
         /// @brief Subtracts all intervals from another set from this set (set difference).
@@ -604,13 +604,13 @@ namespace bslt
             }
 
             container_type new_intervals;
-            new_intervals.reserve(m_intervals.size());
+            new_intervals.reserve(intervals_.size());
 
-            auto it_this = m_intervals.begin();
-            auto it_other = other.m_intervals.begin();
+            auto it_this = intervals_.begin();
+            auto it_other = other.intervals_.begin();
 
             std::optional<IntervalType> fragment;
-            if (it_this != m_intervals.end())
+            if (it_this != intervals_.end())
             {
                 fragment = *it_this;
                 ++it_this;
@@ -618,22 +618,22 @@ namespace bslt
 
             while (fragment.has_value())
             {
-                while (it_other != other.m_intervals.end() && it_other->GetEnd() <= fragment->GetStart())
+                while (it_other != other.intervals_.end() && it_other->GetEnd() <= fragment->GetStart())
                 {
                     ++it_other;
                 }
 
-                if (it_other == other.m_intervals.end())
+                if (it_other == other.intervals_.end())
                 {
                     new_intervals.push_back(*fragment);
-                    new_intervals.insert(new_intervals.end(), it_this, m_intervals.end());
+                    new_intervals.insert(new_intervals.end(), it_this, intervals_.end());
                     break;
                 }
 
                 if (it_other->GetStart() >= fragment->GetEnd())
                 {
                     new_intervals.push_back(*fragment);
-                    if (it_this != m_intervals.end())
+                    if (it_this != intervals_.end())
                     {
                         fragment = *it_this;
                         ++it_this;
@@ -657,7 +657,7 @@ namespace bslt
                 }
                 else
                 {
-                    if (it_this != m_intervals.end())
+                    if (it_this != intervals_.end())
                     {
                         fragment = *it_this;
                         ++it_this;
@@ -669,7 +669,7 @@ namespace bslt
                 }
             }
 
-            m_intervals = std::move(new_intervals);
+            intervals_ = std::move(new_intervals);
         }
 
         /// @brief Intersects this set with another set.
@@ -680,12 +680,12 @@ namespace bslt
         void Intersection(const IntervalSet& other)
         {
             container_type new_intervals;
-            new_intervals.reserve(std::min(m_intervals.size(), other.m_intervals.size()));
+            new_intervals.reserve(std::min(intervals_.size(), other.intervals_.size()));
 
-            auto it1 = m_intervals.begin();
-            auto it2 = other.m_intervals.begin();
+            auto it1 = intervals_.begin();
+            auto it2 = other.intervals_.begin();
 
-            while (it1 != m_intervals.end() && it2 != other.m_intervals.end())
+            while (it1 != intervals_.end() && it2 != other.intervals_.end())
             {
                 if (auto opt_i = it1->Intersection(*it2); opt_i.has_value())
                 {
@@ -708,7 +708,7 @@ namespace bslt
                     ++it2;
                 }
             }
-            m_intervals = std::move(new_intervals);
+            intervals_ = std::move(new_intervals);
         }
 
         /// @brief Clips the set to the given boundary `[start, end)`.
@@ -731,47 +731,47 @@ namespace bslt
             {
                 return i.GetStart() < v;
             };
-            auto it_last = std::lower_bound(m_intervals.begin(), m_intervals.end(), boundary.GetEnd(), comp_start);
+            auto it_last = std::lower_bound(intervals_.begin(), intervals_.end(), boundary.GetEnd(), comp_start);
 
-            if (it_first == m_intervals.end() || it_first >= it_last)
+            if (it_first == intervals_.end() || it_first >= it_last)
             {
                 clear();
                 return;
             }
 
-            if (it_first != m_intervals.begin())
+            if (it_first != intervals_.begin())
             {
-                auto new_end = std::move(it_first, it_last, m_intervals.begin());
-                m_intervals.erase(new_end, m_intervals.end());
+                auto new_end = std::move(it_first, it_last, intervals_.begin());
+                intervals_.erase(new_end, intervals_.end());
             }
             else
             {
-                m_intervals.erase(it_last, m_intervals.end());
+                intervals_.erase(it_last, intervals_.end());
             }
 
-            if (!m_intervals.empty())
+            if (!intervals_.empty())
             {
-                auto opt_first = m_intervals.front().Intersection(boundary);
+                auto opt_first = intervals_.front().Intersection(boundary);
                 if (opt_first.has_value())
                 {
-                    m_intervals.front() = *opt_first;
+                    intervals_.front() = *opt_first;
                 }
                 else
                 {
-                    m_intervals.erase(m_intervals.begin());
+                    intervals_.erase(intervals_.begin());
                 }
             }
 
-            if (!m_intervals.empty())
+            if (!intervals_.empty())
             {
-                auto opt_last = m_intervals.back().Intersection(boundary);
+                auto opt_last = intervals_.back().Intersection(boundary);
                 if (opt_last.has_value())
                 {
-                    m_intervals.back() = *opt_last;
+                    intervals_.back() = *opt_last;
                 }
                 else
                 {
-                    m_intervals.pop_back();
+                    intervals_.pop_back();
                 }
             }
         }
@@ -846,7 +846,7 @@ namespace bslt
         [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v) const noexcept
         {
             auto candidate = find_candidate_for_value(v);
-            if (candidate == m_intervals.end())
+            if (candidate == intervals_.end())
             {
                 return false;
             }
@@ -861,7 +861,7 @@ namespace bslt
         [[nodiscard]] bool Contains(ValueType v, const ValueType epsilon) const noexcept
         {
             auto candidate = find_candidate_for_value(v);
-            if (candidate != m_intervals.end())
+            if (candidate != intervals_.end())
             {
                 if (candidate->Contains(v, epsilon))
                 {
@@ -869,7 +869,7 @@ namespace bslt
                 }
             }
             auto it_check = find_first_candidate(sub_with_floor(v, epsilon));
-            if (it_check != m_intervals.end() && it_check->Contains(v, epsilon))
+            if (it_check != intervals_.end() && it_check->Contains(v, epsilon))
             {
                 return true;
             }
@@ -888,7 +888,7 @@ namespace bslt
                 return true;
             }
             auto candidate = find_candidate_for_value(other.GetStart());
-            if (candidate == m_intervals.end())
+            if (candidate == intervals_.end())
             {
                 return false;
             }
@@ -908,7 +908,7 @@ namespace bslt
                 return true;
             }
             auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -927,7 +927,7 @@ namespace bslt
             }
 
             auto it = find_first_candidate(other.GetStart());
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -949,7 +949,7 @@ namespace bslt
             }
 
             auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -987,7 +987,7 @@ namespace bslt
             {
                 return i.GetEnd() < value;
             };
-            return std::lower_bound(m_intervals.begin(), m_intervals.end(), v, comp);
+            return std::lower_bound(intervals_.begin(), intervals_.end(), v, comp);
         }
 
         /// @brief Finds the first interval `it` such that `it.GetEnd() >= v`. (const)
@@ -1000,7 +1000,7 @@ namespace bslt
             {
                 return i.GetEnd() < value;
             };
-            return std::lower_bound(m_intervals.cbegin(), m_intervals.cend(), v, comp);
+            return std::lower_bound(intervals_.cbegin(), intervals_.cend(), v, comp);
         }
 
         /// @brief Finds the interval that *could* contain `v`.
@@ -1015,15 +1015,15 @@ namespace bslt
             {
                 return v < i.GetStart();
             };
-            auto it = std::upper_bound(m_intervals.begin(), m_intervals.end(), v, comp);
-            if (it == m_intervals.begin())
+            auto it = std::upper_bound(intervals_.begin(), intervals_.end(), v, comp);
+            if (it == intervals_.begin())
             {
-                return m_intervals.end();
+                return intervals_.end();
             }
             return std::prev(it);
         }
 
-        container_type m_intervals;
+        container_type intervals_;
     };
 
     /// @brief An implementation of IntervalSet using `absl::btree_set`.
@@ -1087,6 +1087,7 @@ namespace bslt
         using container_type = absl::btree_set<IntervalType, ClosedOpenIntervalComparer>;
         /// @brief A const iterator to the underlying container.
         using const_iterator = container_type::const_iterator;
+        /// @brief The iterator type.
         using iterator = container_type::const_iterator;
         /// @brief The size type.
         using size_type = container_type::size_type;
@@ -1149,7 +1150,7 @@ namespace bslt
         /// @return A const_iterator pointing to the first interval in the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator begin() const noexcept
         {
-            return m_intervals.begin();
+            return intervals_.begin();
         }
 
         /// @brief Returns a constant iterator to the end of the set.
@@ -1157,7 +1158,7 @@ namespace bslt
         /// @return A const_iterator pointing one past the last interval in the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator end() const noexcept
         {
-            return m_intervals.end();
+            return intervals_.end();
         }
 
         /// @brief Returns a constant iterator to the beginning of the set.
@@ -1165,7 +1166,7 @@ namespace bslt
         /// @return A const_iterator pointing to the first interval in the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator cbegin() const noexcept
         {
-            return m_intervals.cbegin();
+            return intervals_.cbegin();
         }
 
         /// @brief Returns a constant iterator to the end of the set.
@@ -1173,55 +1174,55 @@ namespace bslt
         /// @return A const_iterator pointing one past the last interval in the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator cend() const noexcept
         {
-            return m_intervals.cend();
+            return intervals_.cend();
         }
 
         /// @brief Returns a reverse iterator to the beginning of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rbegin() const noexcept
         {
-            return m_intervals.rbegin();
+            return intervals_.rbegin();
         }
 
         /// @brief Returns a reverse iterator to the end of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rend() const noexcept
         {
-            return m_intervals.rend();
+            return intervals_.rend();
         }
 
         /// @brief Returns a constant reverse iterator to the beginning of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator crbegin() const noexcept
         {
-            return m_intervals.crbegin();
+            return intervals_.crbegin();
         }
 
         /// @brief Returns a constant reverse iterator to the end of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator crend() const noexcept
         {
-            return m_intervals.crend();
+            return intervals_.crend();
         }
 
         /// @brief Returns a non-const iterator to the beginning of the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator begin() noexcept
         {
-            return m_intervals.begin();
+            return intervals_.begin();
         }
 
         /// @brief Returns a non-const iterator to the end of the set.
         [[nodiscard]] BASALT_FORCE_INLINE const_iterator end() noexcept
         {
-            return m_intervals.end();
+            return intervals_.end();
         }
 
         /// @brief Returns a reverse iterator to the beginning of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rbegin() noexcept
         {
-            return m_intervals.rbegin();
+            return intervals_.rbegin();
         }
 
         /// @brief Returns a reverse iterator to the end of the reversed set.
         [[nodiscard]] BASALT_FORCE_INLINE const_reverse_iterator rend() noexcept
         {
-            return m_intervals.rend();
+            return intervals_.rend();
         }
 
         /// @brief Checks if the set is empty.
@@ -1229,7 +1230,7 @@ namespace bslt
         /// @return \c true if the set contains no intervals, \c false otherwise.
         [[nodiscard]] BASALT_FORCE_INLINE bool IsEmpty() const noexcept
         {
-            return m_intervals.empty();
+            return intervals_.empty();
         }
 
         /// @brief Returns the number of disjoint intervals in the set.
@@ -1237,13 +1238,13 @@ namespace bslt
         /// @return The number of intervals.
         [[nodiscard]] BASALT_FORCE_INLINE size_type size() const noexcept
         {
-            return m_intervals.size();
+            return intervals_.size();
         }
 
         /// @brief Clears all intervals from the set.
         BASALT_FORCE_INLINE void clear() noexcept
         {
-            m_intervals.clear();
+            intervals_.clear();
         }
 
         /// @brief Inserts a new interval into the set.
@@ -1262,7 +1263,7 @@ namespace bslt
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
-            while (it != m_intervals.end() && merged_interval.IntersectsOrAdjacent(*it))
+            while (it != intervals_.end() && merged_interval.IntersectsOrAdjacent(*it))
             {
                 merged_interval = merged_interval.Combine(*it);
                 ++it;
@@ -1270,9 +1271,9 @@ namespace bslt
 
             if (erase_start != it)
             {
-                it = m_intervals.erase(erase_start, it);
+                it = intervals_.erase(erase_start, it);
             }
-            m_intervals.insert(it, merged_interval);
+            intervals_.insert(it, merged_interval);
         }
 
         /// @brief Inserts a new interval into the set using epsilon tolerance.
@@ -1295,7 +1296,7 @@ namespace bslt
             auto erase_start = it;
 
             // Merge based on epsilon connectivity
-            while (it != m_intervals.end() && merged_interval.IntersectsOrAdjacent(*it, epsilon))
+            while (it != intervals_.end() && merged_interval.IntersectsOrAdjacent(*it, epsilon))
             {
                 DCHECK(merged_interval.IntersectsOrAdjacent(*it, epsilon)) << "Attempting to merge disjoint intervals";
 
@@ -1308,10 +1309,10 @@ namespace bslt
 
             if (erase_start != it)
             {
-                it = m_intervals.erase(erase_start, it);
+                it = intervals_.erase(erase_start, it);
             }
 
-            m_intervals.insert(it, merged_interval);
+            intervals_.insert(it, merged_interval);
         }
 
         /// @brief Adds all intervals from another set to this set (set union).
@@ -1325,16 +1326,16 @@ namespace bslt
             }
             if (this->IsEmpty())
             {
-                m_intervals = other.m_intervals;
+                intervals_ = other.intervals_;
                 return;
             }
 
             std::vector<IntervalType> linear_buffer;
             // High upper bound on size. We will most likely not need this much.
-            linear_buffer.reserve(m_intervals.size() + other.m_intervals.size());
+            linear_buffer.reserve(intervals_.size() + other.intervals_.size());
 
-            auto it_this = m_intervals.begin();
-            auto it_other = other.m_intervals.begin();
+            auto it_this = intervals_.begin();
+            auto it_other = other.intervals_.begin();
 
             bool start_with_this = (it_this->GetStart() <= it_other->GetStart());
             IntervalType current_merged = start_with_this ? *it_this : *it_other;
@@ -1348,12 +1349,12 @@ namespace bslt
                 ++it_other;
             }
 
-            while (it_this != m_intervals.end() || it_other != other.m_intervals.end())
+            while (it_this != intervals_.end() || it_other != other.intervals_.end())
             {
                 const IntervalType* next_interval = nullptr;
 
-                if (it_this == m_intervals.end() ||
-                    (it_other != other.m_intervals.end() && it_other->GetStart() < it_this->GetStart()))
+                if (it_this == intervals_.end() ||
+                    (it_other != other.intervals_.end() && it_other->GetStart() < it_this->GetStart()))
                 {
                     next_interval = &(*it_other);
                     ++it_other;
@@ -1375,7 +1376,7 @@ namespace bslt
                 }
             }
             linear_buffer.push_back(current_merged);
-            m_intervals = container_type(linear_buffer.begin(), linear_buffer.end());
+            intervals_ = container_type(linear_buffer.begin(), linear_buffer.end());
         }
 
         /// @brief Erases an interval from the set.
@@ -1393,7 +1394,7 @@ namespace bslt
 
             auto it = find_first_candidate(interval_to_remove.GetStart());
 
-            if (it == m_intervals.end() || !interval_to_remove.Intersects(*it))
+            if (it == intervals_.end() || !interval_to_remove.Intersects(*it))
             {
                 return;
             }
@@ -1410,7 +1411,7 @@ namespace bslt
             }
 
             auto erase_end = it;
-            while (erase_end != m_intervals.end() && interval_to_remove.Intersects(*erase_end))
+            while (erase_end != intervals_.end() && interval_to_remove.Intersects(*erase_end))
             {
                 ++erase_end;
             }
@@ -1422,16 +1423,16 @@ namespace bslt
                 last_frag = IntervalType(interval_to_remove.GetEnd(), last_intersected_it->GetEnd());
             }
 
-            auto hint = m_intervals.erase(erase_start, erase_end);
+            auto hint = intervals_.erase(erase_start, erase_end);
 
             if (first_frag.has_value())
             {
-                hint = m_intervals.insert(hint, *first_frag);
+                hint = intervals_.insert(hint, *first_frag);
                 ++hint;
             }
             if (last_frag.has_value())
             {
-                m_intervals.insert(hint, *last_frag);
+                intervals_.insert(hint, *last_frag);
             }
         }
 
@@ -1451,7 +1452,7 @@ namespace bslt
 
             auto it = find_first_candidate(sub_with_floor(interval_to_remove.GetStart(), epsilon));
 
-            if (it == m_intervals.end() || !interval_to_remove.Intersects(*it, epsilon))
+            if (it == intervals_.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
                 return;
             }
@@ -1465,7 +1466,7 @@ namespace bslt
             }
 
             auto erase_end = it;
-            while (erase_end != m_intervals.end() && interval_to_remove.Intersects(*erase_end, epsilon))
+            while (erase_end != intervals_.end() && interval_to_remove.Intersects(*erase_end, epsilon))
             {
                 ++erase_end;
             }
@@ -1477,16 +1478,16 @@ namespace bslt
                 last_frag = IntervalType(interval_to_remove.GetEnd(), last_intersected_it->GetEnd());
             }
 
-            auto hint = m_intervals.erase(erase_start, erase_end);
+            auto hint = intervals_.erase(erase_start, erase_end);
 
             if (first_frag.has_value())
             {
-                hint = m_intervals.insert(hint, *first_frag);
+                hint = intervals_.insert(hint, *first_frag);
                 ++hint;
             }
             if (last_frag.has_value())
             {
-                m_intervals.insert(hint, *last_frag);
+                intervals_.insert(hint, *last_frag);
             }
         }
 
@@ -1501,11 +1502,11 @@ namespace bslt
             }
 
             container_type new_intervals;
-            auto it_this = m_intervals.begin();
-            auto it_other = other.m_intervals.begin();
+            auto it_this = intervals_.begin();
+            auto it_other = other.intervals_.begin();
 
             std::optional<IntervalType> fragment;
-            if (it_this != m_intervals.end())
+            if (it_this != intervals_.end())
             {
                 fragment = *it_this;
                 ++it_this;
@@ -1513,22 +1514,22 @@ namespace bslt
 
             while (fragment.has_value())
             {
-                while (it_other != other.m_intervals.end() && it_other->GetEnd() <= fragment->GetStart())
+                while (it_other != other.intervals_.end() && it_other->GetEnd() <= fragment->GetStart())
                 {
                     ++it_other;
                 }
 
-                if (it_other == other.m_intervals.end())
+                if (it_other == other.intervals_.end())
                 {
                     new_intervals.insert(new_intervals.end(), *fragment);
-                    new_intervals.insert(it_this, m_intervals.end());
+                    new_intervals.insert(it_this, intervals_.end());
                     break;
                 }
 
                 if (it_other->GetStart() >= fragment->GetEnd())
                 {
                     new_intervals.insert(new_intervals.end(), *fragment);
-                    if (it_this != m_intervals.end())
+                    if (it_this != intervals_.end())
                     {
                         fragment = *it_this;
                         ++it_this;
@@ -1552,7 +1553,7 @@ namespace bslt
                 }
                 else
                 {
-                    if (it_this != m_intervals.end())
+                    if (it_this != intervals_.end())
                     {
                         fragment = *it_this;
                         ++it_this;
@@ -1564,7 +1565,7 @@ namespace bslt
                 }
             }
 
-            m_intervals = std::move(new_intervals);
+            intervals_ = std::move(new_intervals);
         }
 
         /// @brief Intersects this set with another set.
@@ -1576,11 +1577,11 @@ namespace bslt
         {
             container_type new_intervals;
 
-            auto it1 = m_intervals.begin();
-            auto it2 = other.m_intervals.begin();
+            auto it1 = intervals_.begin();
+            auto it2 = other.intervals_.begin();
             std::optional<IntervalType> last_inserted;
 
-            while (it1 != m_intervals.end() && it2 != other.m_intervals.end())
+            while (it1 != intervals_.end() && it2 != other.intervals_.end())
             {
                 if (auto opt_i = it1->Intersection(*it2); opt_i.has_value())
                 {
@@ -1613,7 +1614,7 @@ namespace bslt
                 new_intervals.insert(new_intervals.end(), *last_inserted);
             }
 
-            m_intervals = std::move(new_intervals);
+            intervals_ = std::move(new_intervals);
         }
 
         /// @brief Clips the set to the given boundary `[start, end)`.
@@ -1631,37 +1632,37 @@ namespace bslt
             }
 
             auto it_keep = find_first_candidate(boundary.GetStart());
-            m_intervals.erase(m_intervals.begin(), it_keep);
+            intervals_.erase(intervals_.begin(), it_keep);
 
-            auto it_erase = m_intervals.begin();
-            while (it_erase != m_intervals.end() && it_erase->GetStart() < boundary.GetEnd())
+            auto it_erase = intervals_.begin();
+            while (it_erase != intervals_.end() && it_erase->GetStart() < boundary.GetEnd())
             {
                 ++it_erase;
             }
-            m_intervals.erase(it_erase, m_intervals.end());
+            intervals_.erase(it_erase, intervals_.end());
 
-            if (m_intervals.empty())
+            if (intervals_.empty())
             {
                 return;
             }
 
-            auto first_node = m_intervals.extract(m_intervals.begin());
+            auto first_node = intervals_.extract(intervals_.begin());
             if (auto opt_i = first_node.value().Intersection(boundary); opt_i.has_value())
             {
                 first_node.value() = *opt_i;
-                m_intervals.insert(m_intervals.begin(), std::move(first_node));
+                intervals_.insert(intervals_.begin(), std::move(first_node));
             }
 
-            if (m_intervals.empty())
+            if (intervals_.empty())
             {
                 return;
             }
 
-            auto last_node = m_intervals.extract(std::prev(m_intervals.end()));
+            auto last_node = intervals_.extract(std::prev(intervals_.end()));
             if (auto opt_i = last_node.value().Intersection(boundary); opt_i.has_value())
             {
                 last_node.value() = *opt_i;
-                m_intervals.insert(m_intervals.end(), std::move(last_node));
+                intervals_.insert(intervals_.end(), std::move(last_node));
             }
         }
 
@@ -1738,7 +1739,7 @@ namespace bslt
             // the strict comparator. We use find_first_candidate to find the first interval
             // that ends *after* v.
             auto it = find_first_candidate(v);
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -1754,7 +1755,7 @@ namespace bslt
         [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v, const ValueType epsilon) const noexcept
         {
             auto it = find_first_candidate(sub_with_floor(v, epsilon));
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -1772,7 +1773,7 @@ namespace bslt
                 return true;
             }
             auto it = find_first_candidate(other.GetStart());
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -1792,7 +1793,7 @@ namespace bslt
                 return true;
             }
             auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -1811,7 +1812,7 @@ namespace bslt
             }
 
             auto it = find_first_candidate(other.GetStart());
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -1833,7 +1834,7 @@ namespace bslt
             }
 
             auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
-            if (it == m_intervals.end())
+            if (it == intervals_.end())
             {
                 return false;
             }
@@ -1843,7 +1844,7 @@ namespace bslt
 
         friend BASALT_FORCE_INLINE bool operator==(const IntervalSet& lhs, const IntervalSet& rhs)
         {
-            return lhs.m_intervals == rhs.m_intervals;
+            return lhs.intervals_ == rhs.intervals_;
         }
 
     private:
@@ -1872,10 +1873,10 @@ namespace bslt
         /// @return A const iterator to the first candidate, or `end()`.
         BASALT_FORCE_INLINE const_iterator find_first_candidate(const ValueType v) const noexcept
         {
-            return m_intervals.lower_bound(IntervalType(v, v));
+            return intervals_.lower_bound(IntervalType(v, v));
         }
 
-        container_type m_intervals;
+        container_type intervals_;
     };
 }
 

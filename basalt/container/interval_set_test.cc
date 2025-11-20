@@ -880,4 +880,31 @@ namespace bslt::test
             }
         }
     }
+
+    TEST(IntervalSetEdgeCases, UnsignedIntersectionGapMerge)
+    {
+        // Ensure Insert merges intervals across a gap smaller than epsilon.
+        // We use values > epsilon to ensure we test the merge logic itself,
+        // avoiding potential unsigned underflow in the underlying Interval class
+        // (e.g., if Interval::Intersects does 'start - eps').
+
+        using Interval = ClosedOpenInterval<size_t>;
+        IntervalSet<size_t> set;
+
+        // Existing interval: [110, 120)
+        set.Insert(Interval(110, 120));
+
+        // New interval: [100, 108).
+        // Gap is: 110 - 108 = 2.
+        // Epsilon is: 6.
+        // Since Gap (2) <= Epsilon (6), they should merge.
+        // Note: Length (8) > Epsilon (6), so IsEmpty(eps) check passes.
+        set.Insert(Interval(100, 108), 6);
+
+        // Result: [100, 108) + [110, 120) -> [100, 120)
+        ASSERT_FALSE(set.IsEmpty());
+        EXPECT_EQ(set.size(), 1);
+        EXPECT_EQ(set.begin()->GetStart(), 100);
+        EXPECT_EQ(set.begin()->GetEnd(), 120);
+    }
 }
