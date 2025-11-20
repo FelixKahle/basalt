@@ -29,6 +29,12 @@
 
 namespace bslt
 {
+    /// @brief A type-safe index class template.
+    ///
+    /// This is a type safe wrapper around a std::size_t index value.
+    /// It provides type safe index with a zero-overhead abstraction.
+    /// Access the underlying index value via the Index() method
+    /// or the explicit conversion operator to std::size_t.
     template <typename TagType>
     class TypedIndex
     {
@@ -157,6 +163,6 @@ struct std::hash<bslt::TypedIndex<TagType>>
     {
         return std::hash<std::size_t>{}(key.Index());
     }
-}; // namespace std
+};
 
 #endif // BASALT_UTILS_TYPED_INDEX_H_

@@ -47,3 +47,25 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "bits",
+    hdrs = [
+        "bits.h",
+    ],
+    deps = [
+        "//basalt/base:config",
+    ],
+)
+
+cc_test(
+    name = "bits_test",
+    srcs = [
+        "bits_test.cc",
+    ],
+    deps = [
+        ":bits",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
