@@ -31,6 +31,7 @@
 #include <type_traits>
 #include <iterator>
 #include <compare>
+#include <cstdint>
 #include <ostream>
 #include "absl/log/check.h"
 #include "absl/strings/str_format.h"
