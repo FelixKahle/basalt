@@ -25,9 +25,10 @@
 #define BASALT_UTILS_BIT_H_
 
 #ifndef BASALT_USE_STD_BIT
+// Check for standard library feature, Standard C++ version, or MSVC C++ version
 #if defined(__cpp_lib_bitops)
 #define BASALT_USE_STD_BIT 1
-#elif defined(__cplusplus) && __cplusplus >= 202002L
+#elif (defined(__cplusplus) && __cplusplus >= 202002L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002L)
 #define BASALT_USE_STD_BIT 1
 #else
 #define BASALT_USE_STD_BIT 0
@@ -36,8 +37,12 @@
 
 // The std implementation is just superior.
 #if !BASALT_USE_STD_BIT
-#warning "Using custom bit operations implementation. std::bit operations are considered superior, " \
-         "please consider enabling BASALT_USE_STD_BIT."
+#if defined(_MSC_VER)
+// MSVC uses pragma message instead of #warning
+#pragma message("Warning: Using custom bit operations implementation. std::bit operations are considered superior, please consider enabling BASALT_USE_STD_BIT.")
+#else
+#warning "Using custom bit operations implementation. std::bit operations are considered superior, please consider enabling BASALT_USE_STD_BIT."
+#endif
 #endif // !BASALT_USE_STD_BIT
 
 #include <limits>
@@ -71,10 +76,7 @@ namespace bslt::bits
     /// @return A 64-bit integer with only the specified bit set.
     constexpr BASALT_FORCE_INLINE uint64_t BitMask64(const uint32_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
-        }
+        DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
 
         return uint64_t{1} << pos;
     }
@@ -86,10 +88,7 @@ namespace bslt::bits
     /// @return A 32-bit integer with only the specified bit set.
     constexpr BASALT_FORCE_INLINE uint32_t BitMask32(const uint32_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
-        }
+        DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
 
         return 1U << pos;
     }
@@ -101,10 +100,7 @@ namespace bslt::bits
     /// @return A 16-bit integer with only the specified bit set.
     constexpr BASALT_FORCE_INLINE uint16_t BitMask16(const uint32_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
-        }
+        DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
 
         return static_cast<uint16_t>(1U << pos);
     }
@@ -116,10 +112,7 @@ namespace bslt::bits
     /// @return An 8-bit integer with only the specified bit set.
     constexpr BASALT_FORCE_INLINE uint8_t BitMask8(const uint32_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
-        }
+        DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
 
         return static_cast<uint8_t>(1U << pos);
     }
@@ -166,12 +159,9 @@ namespace bslt::bits
     /// @return A 64-bit integer with bits [start, end] set and others cleared.
     constexpr BASALT_FORCE_INLINE uint64_t BitMaskRange64(const uint32_t start, const uint32_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(start, 63) << "Start position must be less than 64";
-            DCHECK_LE(end, 63) << "End position must be less than 64";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK_LE(start, 63) << "Start position must be less than 64";
+        DCHECK_LE(end, 63) << "End position must be less than 64";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         return (kAllBits64 << start) ^ ((kAllBits64 - 1) << end);
     }
@@ -184,12 +174,9 @@ namespace bslt::bits
     /// @return A 32-bit integer with bits [start, end] set and others cleared.
     constexpr BASALT_FORCE_INLINE uint32_t BitMaskRange32(const uint32_t start, const uint32_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(start, 31) << "Start position must be less than 32";
-            DCHECK_LE(end, 31) << "End position must be less than 32";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK_LE(start, 31) << "Start position must be less than 32";
+        DCHECK_LE(end, 31) << "End position must be less than 32";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         return (kAllBits32 << start) ^ ((kAllBits32 - 1) << end);
     }
@@ -202,12 +189,9 @@ namespace bslt::bits
     /// @return A 16-bit integer with bits [start, end] set and others cleared.
     constexpr BASALT_FORCE_INLINE uint16_t BitMaskRange16(const uint32_t start, const uint32_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(start, 15) << "Start position must be less than 16";
-            DCHECK_LE(end, 15) << "End position must be less than 16";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK_LE(start, 15) << "Start position must be less than 16";
+        DCHECK_LE(end, 15) << "End position must be less than 16";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         return static_cast<uint16_t>((kAllBits16 << start) ^ ((kAllBits16 - 1) << end));
     }
@@ -220,12 +204,9 @@ namespace bslt::bits
     /// @return An 8-bit integer with bits [start, end] set and others cleared.
     constexpr BASALT_FORCE_INLINE uint8_t BitMaskRange8(const uint32_t start, const uint32_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(start, 7) << "Start position must be less than 8";
-            DCHECK_LE(end, 7) << "End position must be less than 8";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK_LE(start, 7) << "Start position must be less than 8";
+        DCHECK_LE(end, 7) << "End position must be less than 8";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         return static_cast<uint8_t>((kAllBits8 << start) ^ ((kAllBits8 - 1) << end));
     }
@@ -272,10 +253,7 @@ namespace bslt::bits
     /// @return A 64-bit integer with all bits set except the specified bit.
     constexpr BASALT_FORCE_INLINE uint64_t InverseBitMask64(const uint32_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
-        }
+        DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
 
         return ~(uint64_t{1} << pos);
     }
@@ -287,10 +265,7 @@ namespace bslt::bits
     /// @return A 32-bit integer with all bits set except the specified bit.
     constexpr BASALT_FORCE_INLINE uint32_t InverseBitMask32(const uint32_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
-        }
+        DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
 
         return ~(1U << pos);
     }
@@ -302,10 +277,7 @@ namespace bslt::bits
     /// @return A 16-bit integer with all bits set except the specified bit.
     constexpr BASALT_FORCE_INLINE uint16_t InverseBitMask16(const uint32_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
-        }
+        DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
 
         return static_cast<uint16_t>(~(1U << pos));
     }
@@ -317,10 +289,7 @@ namespace bslt::bits
     /// @return An 8-bit integer with all bits set except the specified bit.
     constexpr BASALT_FORCE_INLINE uint8_t InverseBitMask8(const uint32_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
-        }
+        DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
 
         return static_cast<uint8_t>(~(1U << pos));
     }
@@ -367,12 +336,9 @@ namespace bslt::bits
     /// @return A 64-bit integer with bits [start, end] cleared and others set.
     constexpr BASALT_FORCE_INLINE uint64_t InverseBitMaskRange64(const uint32_t start, const uint32_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(start, 63) << "Start position must be less than 64";
-            DCHECK_LE(end, 63) << "End position must be less than 64";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK_LE(start, 63) << "Start position must be less than 64";
+        DCHECK_LE(end, 63) << "End position must be less than 64";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         // Calculate the positive mask and invert it
         return ~((kAllBits64 << start) ^ ((kAllBits64 - 1) << end));
@@ -386,12 +352,9 @@ namespace bslt::bits
     /// @return A 32-bit integer with bits [start, end] cleared and others set.
     constexpr BASALT_FORCE_INLINE uint32_t InverseBitMaskRange32(const uint32_t start, const uint32_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(start, 31) << "Start position must be less than 32";
-            DCHECK_LE(end, 31) << "End position must be less than 32";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK_LE(start, 31) << "Start position must be less than 32";
+        DCHECK_LE(end, 31) << "End position must be less than 32";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         return ~((kAllBits32 << start) ^ ((kAllBits32 - 1) << end));
     }
@@ -404,12 +367,9 @@ namespace bslt::bits
     /// @return A 16-bit integer with bits [start, end] cleared and others set.
     constexpr BASALT_FORCE_INLINE uint16_t InverseBitMaskRange16(const uint32_t start, const uint32_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(start, 15) << "Start position must be less than 16";
-            DCHECK_LE(end, 15) << "End position must be less than 16";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK_LE(start, 15) << "Start position must be less than 16";
+        DCHECK_LE(end, 15) << "End position must be less than 16";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         return static_cast<uint16_t>(~((kAllBits16 << start) ^ ((kAllBits16 - 1) << end)));
     }
@@ -422,12 +382,9 @@ namespace bslt::bits
     /// @return An 8-bit integer with bits [start, end] cleared and others set.
     constexpr BASALT_FORCE_INLINE uint8_t InverseBitMaskRange8(const uint32_t start, const uint32_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(start, 7) << "Start position must be less than 8";
-            DCHECK_LE(end, 7) << "End position must be less than 8";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK_LE(start, 7) << "Start position must be less than 8";
+        DCHECK_LE(end, 7) << "End position must be less than 8";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         return static_cast<uint8_t>(~((kAllBits8 << start) ^ ((kAllBits8 - 1) << end)));
     }
@@ -649,10 +606,7 @@ namespace bslt::bits
     /// @note The behavior is undefined if n is 0.
     constexpr BASALT_FORCE_INLINE int LeastSignificantBitPosition64DeBruijn(const uint64_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0ULL) << "LSB position is undefined for value 0";
-        }
+        DCHECK_NE(n, 0ULL) << "LSB position is undefined for value 0";
 
         constexpr auto kSeq = uint64_t{0x0218a392dd5fb34f};
         constexpr int kTab[64] = {
@@ -676,10 +630,7 @@ namespace bslt::bits
     /// @note The behavior is undefined if value is 0.
     constexpr BASALT_FORCE_INLINE uint64_t LeastSignificantBitPosition64(const uint64_t value) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(value, 0ULL) << "LSB position is undefined for value 0";
-        }
+        DCHECK_NE(value, 0ULL) << "LSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint64_t>(std::countr_zero(value));
@@ -697,10 +648,7 @@ namespace bslt::bits
     /// @note The behavior is undefined if value is 0.
     constexpr BASALT_FORCE_INLINE uint32_t LeastSignificantBitPosition32(const uint32_t value) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
-        }
+        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint32_t>(std::countr_zero(value));
@@ -716,10 +664,7 @@ namespace bslt::bits
     /// @return The 0-based index of the least significant bit (0-15).
     constexpr BASALT_FORCE_INLINE uint16_t LeastSignificantBitPosition16(const uint16_t value) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
-        }
+        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint16_t>(std::countr_zero(value));
@@ -735,10 +680,7 @@ namespace bslt::bits
     /// @return The 0-based index of the least significant bit (0-7).
     constexpr BASALT_FORCE_INLINE uint8_t LeastSignificantBitPosition8(const uint8_t value) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
-        }
+        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
 #if BASALT_USE_STD_BIT
         return static_cast<uint8_t>(std::countr_zero(value));
 #else
@@ -789,10 +731,7 @@ namespace bslt::bits
     /// @return A value with only the most significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint64_t MostSignificantBitWord64(uint64_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0ULL) << "MSB word is undefined for value 0";
-        }
+        DCHECK_NE(n, 0ULL) << "MSB word is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
@@ -814,10 +753,7 @@ namespace bslt::bits
     /// @return A value with only the most significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint32_t MostSignificantBitWord32(uint32_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
-        }
+        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
@@ -838,10 +774,7 @@ namespace bslt::bits
     /// @return A value with only the most significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint16_t MostSignificantBitWord16(uint16_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
-        }
+        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
@@ -861,10 +794,7 @@ namespace bslt::bits
     /// @return A value with only the most significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitWord8(uint8_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
-        }
+        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
@@ -918,10 +848,7 @@ namespace bslt::bits
     /// @return The 0-based index of the most significant bit (0-63).
     constexpr BASALT_FORCE_INLINE uint64_t MostSignificantBitPosition64(uint64_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0ULL) << "MSB position is undefined for value 0";
-        }
+        DCHECK_NE(n, 0ULL) << "MSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint64_t>(std::bit_width(n) - 1);
@@ -967,10 +894,7 @@ namespace bslt::bits
     /// @return The 0-based index of the most significant bit (0-31).
     constexpr BASALT_FORCE_INLINE uint32_t MostSignificantBitPosition32(uint32_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
-        }
+        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint32_t>(std::bit_width(n) - 1);
@@ -1011,10 +935,7 @@ namespace bslt::bits
     /// @return The 0-based index of the most significant bit (0-15).
     constexpr BASALT_FORCE_INLINE uint16_t MostSignificantBitPosition16(uint16_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
-        }
+        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint16_t>(std::bit_width(n) - 1);
@@ -1050,10 +971,7 @@ namespace bslt::bits
     /// @return The 0-based index of the most significant bit (0-7).
     constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitPosition8(uint8_t n) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
-        }
+        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint8_t>(std::bit_width(n) - 1);
@@ -1342,10 +1260,7 @@ namespace bslt::bits
     /// @return A bitmask with bits set from position s to the most significant bit.
     constexpr BASALT_FORCE_INLINE uint64_t IntervalUp64(const uint64_t s)
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(s, 63) << "Shift exceeds bit width";
-        }
+        DCHECK_LE(s, 63) << "Shift exceeds bit width";
 
         return kAllBits64 << s;
     }
@@ -1357,10 +1272,7 @@ namespace bslt::bits
     /// @return A bitmask with bits set from position s to the most significant bit.
     constexpr BASALT_FORCE_INLINE uint32_t IntervalUp32(const uint32_t s)
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(s, 31) << "Shift exceeds bit width";
-        }
+        DCHECK_LE(s, 31) << "Shift exceeds bit width";
 
         return kAllBits32 << s;
     }
@@ -1372,10 +1284,7 @@ namespace bslt::bits
     /// @return A bitmask with bits set from position s to the most significant bit.
     constexpr BASALT_FORCE_INLINE uint16_t IntervalUp16(const uint16_t s)
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(s, 15) << "Shift exceeds bit width";
-        }
+        DCHECK_LE(s, 15) << "Shift exceeds bit width";
 
         return static_cast<uint16_t>(kAllBits16 << s);
     }
@@ -1387,10 +1296,7 @@ namespace bslt::bits
     /// @return A bitmask with bits set from position s to the most significant bit.
     constexpr BASALT_FORCE_INLINE uint8_t IntervalUp8(const uint8_t s)
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(s, 7) << "Shift exceeds bit width";
-        }
+        DCHECK_LE(s, 7) << "Shift exceeds bit width";
 
         return static_cast<uint8_t>(kAllBits8 << s);
     }
@@ -1436,10 +1342,7 @@ namespace bslt::bits
     /// @return A bitmask with bits set from the least significant bit up to position s.
     constexpr BASALT_FORCE_INLINE uint64_t IntervalDown64(const uint64_t s)
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(s, 63) << "Shift exceeds bit width";
-        }
+        DCHECK_LE(s, 63) << "Shift exceeds bit width";
 
         return kAllBits64 >> (63 - s);
     }
@@ -1451,10 +1354,7 @@ namespace bslt::bits
     /// @return A bitmask with bits set from the least significant bit up to position s.
     constexpr BASALT_FORCE_INLINE uint32_t IntervalDown32(const uint32_t s)
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(s, 31) << "Shift exceeds bit width";
-        }
+        DCHECK_LE(s, 31) << "Shift exceeds bit width";
         return kAllBits32 >> (31 - s);
     }
 
@@ -1465,10 +1365,7 @@ namespace bslt::bits
     /// @return A bitmask with bits set from the least significant bit up to position s.
     constexpr BASALT_FORCE_INLINE uint16_t IntervalDown16(const uint16_t s)
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(s, 15) << "Shift exceeds bit width";
-        }
+        DCHECK_LE(s, 15) << "Shift exceeds bit width";
 
         return static_cast<uint16_t>(kAllBits16 >> (15 - s));
     }
@@ -1480,10 +1377,7 @@ namespace bslt::bits
     /// @return A bitmask with bits set from the least significant bit up to position s.
     constexpr BASALT_FORCE_INLINE uint8_t IntervalDown8(const uint8_t s)
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK_LE(s, 7) << "Shift exceeds bit width";
-        }
+        DCHECK_LE(s, 7) << "Shift exceeds bit width";
 
         return static_cast<uint8_t>(kAllBits8 >> (7 - s));
     }
@@ -1530,10 +1424,7 @@ namespace bslt::bits
     /// @return True if the bit is set (1), false otherwise (0).
     constexpr BASALT_FORCE_INLINE bool IsBitSet64(const uint64_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         return (bitset[BitOffset64(pos)] & BitMask64(BitPosition64(pos)));
@@ -1547,10 +1438,7 @@ namespace bslt::bits
     /// @return True if the bit is set (1), false otherwise (0).
     constexpr BASALT_FORCE_INLINE bool IsBitSet32(const uint32_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         return (bitset[BitOffset32(pos)] & BitMask32(BitPosition32(pos)));
@@ -1564,10 +1452,7 @@ namespace bslt::bits
     /// @return True if the bit is set (1), false otherwise (0).
     constexpr BASALT_FORCE_INLINE bool IsBitSet16(const uint16_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         return (bitset[BitOffset16(pos)] & BitMask16(BitPosition16(pos)));
@@ -1581,10 +1466,7 @@ namespace bslt::bits
     /// @return True if the bit is set (1), false otherwise (0).
     constexpr BASALT_FORCE_INLINE bool IsBitSet8(const uint8_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         return (bitset[BitOffset8(pos)] & BitMask8(BitPosition8(pos)));
@@ -1631,10 +1513,7 @@ namespace bslt::bits
     /// @param pos The global bit position to set.
     constexpr BASALT_FORCE_INLINE void SetBit64(uint64_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         bitset[BitOffset64(pos)] |= BitMask64(BitPosition64(pos));
@@ -1646,10 +1525,7 @@ namespace bslt::bits
     /// @param pos The global bit position to set.
     constexpr BASALT_FORCE_INLINE void SetBit32(uint32_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         bitset[BitOffset32(pos)] |= BitMask32(BitPosition32(pos));
@@ -1661,10 +1537,7 @@ namespace bslt::bits
     /// @param pos The global bit position to set.
     constexpr BASALT_FORCE_INLINE void SetBit16(uint16_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         bitset[BitOffset16(pos)] |= BitMask16(BitPosition16(pos));
@@ -1676,10 +1549,7 @@ namespace bslt::bits
     /// @param pos The global bit position to set.
     constexpr BASALT_FORCE_INLINE void SetBit8(uint8_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         bitset[BitOffset8(pos)] |= BitMask8(BitPosition8(pos));
@@ -1720,10 +1590,8 @@ namespace bslt::bits
 
     constexpr BASALT_FORCE_INLINE void ClearBit64(uint64_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
+
 
         // ReSharper disable once CppDFANullDereference
         bitset[BitOffset64(pos)] &= ~BitMask64(BitPosition64(pos));
@@ -1731,10 +1599,7 @@ namespace bslt::bits
 
     constexpr BASALT_FORCE_INLINE void ClearBit32(uint32_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         bitset[BitOffset32(pos)] &= ~BitMask32(BitPosition32(pos));
@@ -1742,10 +1607,7 @@ namespace bslt::bits
 
     constexpr BASALT_FORCE_INLINE void ClearBit16(uint16_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         bitset[BitOffset16(pos)] &= ~BitMask16(BitPosition16(pos));
@@ -1753,10 +1615,7 @@ namespace bslt::bits
 
     constexpr BASALT_FORCE_INLINE void ClearBit8(uint8_t* const bitset, const uint64_t pos) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         // ReSharper disable once CppDFANullDereference
         bitset[BitOffset8(pos)] &= ~BitMask8(BitPosition8(pos));
@@ -1793,11 +1652,8 @@ namespace bslt::bits
     constexpr BASALT_FORCE_INLINE uint64_t BitCountRange(const T* const bitset, const uint64_t start,
                                                          const uint64_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         const uint64_t start_idx = BitOffset<T>(start);
         const uint64_t end_idx = BitOffset<T>(end);
@@ -1881,11 +1737,8 @@ namespace bslt::bits
         requires std::is_unsigned_v<T>
     constexpr bool IsEmptyRange(const T* const bitset, const uint64_t start, const uint64_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
 
         const uint64_t start_idx = BitOffset<T>(start);
         const uint64_t end_idx = BitOffset<T>(end);
@@ -1980,10 +1833,7 @@ namespace bslt::bits
     constexpr BASALT_FORCE_INLINE int64_t LeastSignificantBitPosition(const T* const bitset, const uint64_t start,
                                                                       const uint64_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         if (start > end)
         {
@@ -2104,10 +1954,7 @@ namespace bslt::bits
     constexpr int64_t MostSignificantBitPosition(const T* const bitset, const uint64_t start,
                                                  const uint64_t end) noexcept
     {
-        if (!std::is_constant_evaluated())
-        {
-            DCHECK(bitset != nullptr) << "Bitset pointer is null";
-        }
+        DCHECK(bitset != nullptr) << "Bitset pointer is null";
 
         if (start > end)
         {

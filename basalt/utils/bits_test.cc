@@ -30,19 +30,16 @@
 
 namespace bslt::bits::test
 {
-    // 1.1 Constants
     static_assert(kAllBits64 == 0xFFFFFFFFFFFFFFFFULL, "kAllBits64 constexpr failed");
     static_assert(kAllBits32 == 0xFFFFFFFFU, "kAllBits32 constexpr failed");
     static_assert(kAllBits16 == 0xFFFFU, "kAllBits16 constexpr failed");
     static_assert(kAllBits8 == 0xFFU, "kAllBits8 constexpr failed");
 
-    // 1.2 Single Bit Masks
     static_assert(BitMask64(63) == 0x8000000000000000ULL, "BitMask64 constexpr failed");
     static_assert(BitMask32(31) == 0x80000000U, "BitMask32 constexpr failed");
     static_assert(BitMask16(15) == 0x8000U, "BitMask16 constexpr failed");
     static_assert(BitMask8(7) == 0x80U, "BitMask8 constexpr failed");
 
-    // 1.3 Range Masks
     static_assert(BitMaskRange64(0, 63) == kAllBits64, "BitMaskRange64 full constexpr failed");
     static_assert(BitMaskRange64(1, 2) == 0x06ULL, "BitMaskRange64 sub constexpr failed");
     static_assert(BitMaskRange32(0, 31) == kAllBits32, "BitMaskRange32 full constexpr failed");
@@ -50,32 +47,26 @@ namespace bslt::bits::test
     static_assert(BitMaskRange64(63, 63) == 0x8000000000000000ULL, "BitMaskRange64 single-bit high failed");
     static_assert(BitMaskRange64(0, 0) == 0x1ULL, "BitMaskRange64 single-bit low failed");
 
-    // 1.4 Inverse Masks
     static_assert(InverseBitMask64(0) == ~1ULL, "InverseBitMask64 constexpr failed");
     static_assert(InverseBitMask32(0) == ~1U, "InverseBitMask32 constexpr failed");
 
-    // 1.5 Inverse Range Masks
     static_assert(InverseBitMaskRange64(0, 63) == 0ULL, "InverseBitMaskRange64 full constexpr failed");
     static_assert(InverseBitMaskRange8(1, 6) == 0x81U, "InverseBitMaskRange8 partial constexpr failed");
 
-    // 1.6 Population Count
     static_assert(BitCount64(0xFFFFFFFFFFFFFFFFULL) == 64, "BitCount64 constexpr failed");
     static_assert(BitCount32(0x0000FFFFU) == 16, "BitCount32 constexpr failed");
     static_assert(BitCount16(0x0F0FU) == 8, "BitCount16 constexpr failed");
     static_assert(BitCount8(0x03U) == 2, "BitCount8 constexpr failed");
 
-    // 1.7 LSB/MSB Extraction
     static_assert(LeastSignificantBitWord64(0x1010ULL) == 0x0010ULL, "LSBWord64 constexpr failed");
     static_assert(MostSignificantBitWord64(0x1010ULL) == 0x1000ULL, "MSBWord64 constexpr failed");
 
     static_assert(LeastSignificantBitPosition64(0x8000000000000000ULL) == 63, "LSBPos64 constexpr failed");
     static_assert(MostSignificantBitPosition64(0x0000000000000001ULL) == 0, "MSBPos64 constexpr failed");
 
-    // 1.8 Intervals
     static_assert(IntervalUp64(63) == 0x8000000000000000ULL, "IntervalUp64 constexpr failed");
     static_assert(IntervalDown64(0) == 1ULL, "IntervalDown64 constexpr failed");
 
-    // 1.9 Storage Utils
     static_assert(BitLength64(65) == 2, "BitLength64 constexpr failed");
     static_assert(BitOffset64(64) == 1, "BitOffset64 constexpr failed");
     static_assert(BitPosition64(65) == 1, "BitPosition64 constexpr failed");
@@ -182,7 +173,6 @@ namespace bslt::bits::test
 
         T data[k_arr_size] = {0};
 
-        // 1. SetBit & IsBitSet
         SetBit<T>(data, 0); // Word 0, Bit 0
         EXPECT_EQ(data[0], T{1});
         EXPECT_TRUE(IsBitSet<T>(data, 0));
@@ -192,12 +182,10 @@ namespace bslt::bits::test
         EXPECT_EQ(data[1], T{1});
         EXPECT_TRUE(IsBitSet<T>(data, word1_bit));
 
-        // 2. ClearBit
         ClearBit<T>(data, 0);
         EXPECT_EQ(data[0], T{0});
         EXPECT_FALSE(IsBitSet<T>(data, 0));
 
-        // 3. BitCountRange
         // Fill Word 2 entirely
         const uint64_t start_w2 = 2 * k_bits_per_elem;
         for (uint64_t i = 0; i < k_bits_per_elem; ++i)
@@ -211,7 +199,6 @@ namespace bslt::bits::test
         // Count partial
         EXPECT_EQ(BitCountRange<T>(data, start_w2, start_w2 + 1), 2);
 
-        // 4. IsEmptyRange
         EXPECT_TRUE(IsEmptyRange<T>(data, 0, k_bits_per_elem - 1)); // Word 0 is empty
         EXPECT_FALSE(IsEmptyRange<T>(data, start_w2, start_w2 + 5)); // Word 2 is full
     }
@@ -228,31 +215,23 @@ namespace bslt::bits::test
         const uint64_t target_bit = 2 * k_bits_per_elem;
         SetBit<T>(data, target_bit);
 
-        // 1. Exact find LSB
         // Clamp search end to total_bits - 1
-        uint64_t search_end = std::min(target_bit + 10, total_bits - 1);
+        const uint64_t search_end = std::min(target_bit + 10, total_bits - 1);
         EXPECT_EQ(LeastSignificantBitPosition<T>(data, 0, search_end), static_cast<int64_t>(target_bit));
-
-        // 2. Exact find MSB
         EXPECT_EQ(MostSignificantBitPosition<T>(data, 0, search_end), static_cast<int64_t>(target_bit));
-
-        // 3. Range before bit
         if (target_bit > 0)
         {
             EXPECT_EQ(LeastSignificantBitPosition<T>(data, 0, target_bit - 1), -1);
         }
 
-        // 4. Range after bit
-        uint64_t after_start = target_bit + 1;
-        uint64_t after_end = std::min(target_bit + 20, total_bits - 1);
+        const uint64_t after_start = target_bit + 1;
+        const uint64_t after_end = std::min(target_bit + 20, total_bits - 1);
         if (after_start < total_bits)
         {
             EXPECT_EQ(MostSignificantBitPosition<T>(data, after_start, after_end), -1);
         }
 
-        // 5. Add another bit higher up
-        const uint64_t high_bit = target_bit + 5;
-        if (high_bit < total_bits)
+        if (const uint64_t high_bit = target_bit + 5; high_bit < total_bits)
         {
             SetBit<T>(data, high_bit);
 
@@ -275,7 +254,7 @@ namespace bslt::bits::test
 
         T data[k_arr_size] = {0};
         // Set bit in the very last word
-        uint64_t last_bit = (k_arr_size * k_bits_per_elem) - 1;
+        const uint64_t last_bit = (k_arr_size * k_bits_per_elem) - 1;
         SetBit<T>(data, last_bit);
 
         // Search entire range
@@ -283,7 +262,7 @@ namespace bslt::bits::test
         EXPECT_EQ(MostSignificantBitPosition<T>(data, 0, last_bit), static_cast<int64_t>(last_bit));
 
         // Search from middle to end
-        uint64_t mid_bit = (k_arr_size * k_bits_per_elem) / 2;
+        const uint64_t mid_bit = (k_arr_size * k_bits_per_elem) / 2;
         EXPECT_EQ(LeastSignificantBitPosition<T>(data, mid_bit, last_bit), static_cast<int64_t>(last_bit));
     }
 
@@ -375,7 +354,7 @@ namespace bslt::bits::test
     TEST(EdgeCaseTest, SearchRangeNoBitsSetInSubset)
     {
         // Word 0: 11000011 (bits 0,1,6,7 set)
-        uint8_t data[] = {0xC3}; // 11000011
+        constexpr uint8_t data[] = {0xC3}; // 11000011
 
         // Search in middle [2, 5] - should be empty
         EXPECT_EQ(LeastSignificantBitPosition8(data, 2, 5), -1);
