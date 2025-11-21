@@ -34,113 +34,196 @@
 #endif // defined(__cpp_lib_bitops)
 #endif // BASALT_USE_STD_BIT
 
+// The std implementation is just superior.
 #if !BASALT_USE_STD_BIT
 #warning "Using custom bit operations implementation. Consider enabling C++20 or later for std::bit support."
 #endif // !BASALT_USE_STD_BIT
 
+#include <limits>
 #include <type_traits>
-#include <cstdint>
 #if BASALT_USE_STD_BIT
 #include <bit>
 #endif // BASALT_USE_STD_BIT
-#include "basalt/base/config.h"
-#if defined(_MSC_VER)
-#include <intrin.h>
-#endif // defined(_MSC_VER)
 #include "absl/log/check.h"
+#include "basalt/base/config.h"
 
 namespace bslt::bits
 {
     // Useful bitmask constants
 
-    constexpr uint64_t kAllBits64 = uint64_t{0xFFFFFFFFFFFFFFFF};
-    constexpr uint64_t kAllBitsButLsb64 = uint64_t{0xFFFFFFFFFFFFFFFE};
-    constexpr uint32_t kAllBits32 = 0xFFFFFFFFU;
-    constexpr uint32_t kAllBitsButLsb32 = 0xFFFFFFFEU;
-    constexpr uint16_t kAllBits16 = 0xFFFFU;
-    constexpr uint16_t kAllBitsButLsb16 = 0xFFFEU;
-    constexpr uint8_t kAllBits8 = 0xFFU;
-    constexpr uint8_t kAllBitsButLsb8 = 0xFEU;
+    constexpr uint64_t kAllBits64 = std::numeric_limits<uint64_t>::max();
+    constexpr uint64_t kAllBitsButLsb64 = kAllBits64 ^ 1ULL; // or kAllBits64 - 1
 
-    /// @brief Creates a 64-bit value with a single bit set at the specified position.
+    constexpr uint32_t kAllBits32 = std::numeric_limits<uint32_t>::max();
+    constexpr uint32_t kAllBitsButLsb32 = kAllBits32 ^ 1U;
+
+    constexpr uint16_t kAllBits16 = std::numeric_limits<uint16_t>::max();
+    constexpr uint16_t kAllBitsButLsb16 = kAllBits16 ^ 1;
+
+    constexpr uint8_t kAllBits8 = std::numeric_limits<uint8_t>::max();
+    constexpr uint8_t kAllBitsButLsb8 = kAllBits8 ^ 1;
+
+    /// @brief Generates a bitmask with a single bit set at the specified position for a 64-bit integer.
     ///
-    /// @param pos The 0-based index of the bit to set (0-63).
-    /// @return A uint64_t with only the bit at 'pos' set to 1.
-    /// @note The behavior is undefined if pos >= 64.
-    constexpr BASALT_FORCE_INLINE uint64_t OneBit64(const uint32_t pos) noexcept
+    /// @param pos The bit position to set (0-63).
+    ///
+    /// @return A 64-bit integer with only the specified bit set.
+    constexpr BASALT_FORCE_INLINE uint64_t BitMask64(const uint32_t pos) noexcept
     {
         DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
 
         return uint64_t{1} << pos;
     }
 
-    /// @brief Creates a 32-bit value with a single bit set at the specified position.
+    /// @brief Generates a bitmask with a single bit set at the specified position for a 32-bit integer.
     ///
-    /// @param pos The 0-based index of the bit to set (0-31).
-    /// @return A uint32_t with only the bit at 'pos' set to 1.
-    /// @note The behavior is undefined if pos >= 32.
-    constexpr BASALT_FORCE_INLINE uint32_t OneBit32(const uint32_t pos) noexcept
+    /// @param pos The bit position to set (0-31).
+    ///
+    /// @return A 32-bit integer with only the specified bit set.
+    constexpr BASALT_FORCE_INLINE uint32_t BitMask32(const uint32_t pos) noexcept
     {
-        DCHECK_LE(pos, 31U) << "Shift amount must be less than 32";
+        DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
 
         return 1U << pos;
     }
 
-    /// @brief Creates a 16-bit value with a single bit set at the specified position.
+    /// @brief Generates a bitmask with a single bit set at the specified position for a 16-bit integer.
     ///
-    /// @param pos The 0-based index of the bit to set (0-15).
-    /// @return A uint16_t with only the bit at 'pos' set to 1.
-    /// @note The behavior is undefined if pos >= 16.
-    constexpr BASALT_FORCE_INLINE uint16_t OneBit16(const uint32_t pos) noexcept
+    /// @param pos The bit position to set (0-15).
+    ///
+    /// @return A 16-bit integer with only the specified bit set.
+    constexpr BASALT_FORCE_INLINE uint16_t BitMask16(const uint32_t pos) noexcept
     {
-        DCHECK_LE(pos, 15U) << "Shift amount must be less than 16";
+        DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
 
         return static_cast<uint16_t>(1U << pos);
     }
 
-    /// @brief Creates an 8-bit value with a single bit set at the specified position.
+    /// @brief Generates a bitmask with a single bit set at the specified position for an 8-bit integer.
     ///
-    /// @param pos The 0-based index of the bit to set (0-7).
-    /// @return A uint8_t with only the bit at 'pos' set to 1.
-    /// @note The behavior is undefined if pos >= 8.
-    constexpr BASALT_FORCE_INLINE uint8_t OneBit8(const uint32_t pos) noexcept
+    /// @param pos The bit position to set (0-7).
+    ///
+    /// @return An 8-bit integer with only the specified bit set.
+    constexpr BASALT_FORCE_INLINE uint8_t BitMask8(const uint32_t pos) noexcept
     {
-        DCHECK_LE(pos, 7U) << "Shift amount must be less than 8";
+        DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
 
         return static_cast<uint8_t>(1U << pos);
     }
 
-    /// @brief Generic template to create a value with a single bit set.
-    ///
-    /// Dispatches to the appropriate size-specific implementation based on type T.
+    /// @brief Generic template to generate a bitmask for any unsigned integer type.
     ///
     /// @tparam T An unsigned integer type.
-    /// @param pos The 0-based index of the bit to set.
-    /// @return A value of type T with only the bit at 'pos' set to 1.
+    ///
+    /// @param pos The bit position to set.
+    ///
+    /// @return A value of type T with only the specified bit set.
     // ReSharper disable once CppNotAllPathsReturnValue
     template <typename T>
         requires std::is_unsigned_v<T>
-    constexpr BASALT_FORCE_INLINE T OneBit(const uint32_t pos) noexcept
+    constexpr BASALT_FORCE_INLINE T BitMask(const uint32_t pos) noexcept
     {
         if constexpr (std::is_same_v<T, uint64_t>)
         {
-            return OneBit64(pos);
+            return BitMask64(pos);
         }
         else if constexpr (std::is_same_v<T, uint32_t>)
         {
-            return OneBit32(pos);
+            return BitMask32(pos);
         }
         else if constexpr (std::is_same_v<T, uint16_t>)
         {
-            return OneBit16(pos);
+            return BitMask16(pos);
         }
         else if constexpr (std::is_same_v<T, uint8_t>)
         {
-            return OneBit8(pos);
+            return BitMask8(pos);
         }
         else
         {
-            static_assert(sizeof(T) == 0, "Unsupported type for OneBit");
+            static_assert(sizeof(T) == 0, "Unsupported type for BitMask");
+        }
+    }
+
+    /// @brief Generates an inverse bitmask with all bits set except the one at the specified position for a 64-bit integer.
+    ///
+    /// @param pos The bit position to clear (0-63).
+    ///
+    /// @return A 64-bit integer with all bits set except the specified bit.
+    constexpr BASALT_FORCE_INLINE uint64_t InverseBitMask64(const uint32_t pos) noexcept
+    {
+        DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
+
+        return ~(uint64_t{1} << pos);
+    }
+
+    /// @brief Generates an inverse bitmask with all bits set except the one at the specified position for a 32-bit integer.
+    ///
+    /// @param pos The bit position to clear (0-31).
+    ///
+    /// @return A 32-bit integer with all bits set except the specified bit.
+    constexpr BASALT_FORCE_INLINE uint32_t InverseBitMask32(const uint32_t pos) noexcept
+    {
+        DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
+
+        return ~(1U << pos);
+    }
+
+    /// @brief Generates an inverse bitmask with all bits set except the one at the specified position for a 16-bit integer.
+    ///
+    /// @param pos The bit position to clear (0-15).
+    ///
+    /// @return A 16-bit integer with all bits set except the specified bit.
+    constexpr BASALT_FORCE_INLINE uint16_t InverseBitMask16(const uint32_t pos) noexcept
+    {
+        DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
+
+        return static_cast<uint16_t>(~(1U << pos));
+    }
+
+    /// @brief Generates an inverse bitmask with all bits set except the one at the specified position for an 8-bit integer.
+    ///
+    /// @param pos The bit position to clear (0-7).
+    ///
+    /// @return An 8-bit integer with all bits set except the specified bit.
+    constexpr BASALT_FORCE_INLINE uint8_t InverseBitMask8(const uint32_t pos) noexcept
+    {
+        DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
+
+        return static_cast<uint8_t>(~(1U << pos));
+    }
+
+    /// @brief Generic template to generate an inverse bitmask for any unsigned integer type.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param pos The bit position to clear.
+    ///
+    /// @return A value of type T with all bits set except the specified bit.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE T InverseBitMask(const uint32_t pos) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return InverseBitMask64(pos);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return InverseBitMask32(pos);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return InverseBitMask16(pos);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return InverseBitMask8(pos);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for InverseBitMask");
         }
     }
 
@@ -149,6 +232,7 @@ namespace bslt::bits
     /// Uses a SWAR (SIMD Within A Register) algorithm for constant-time execution.
     ///
     /// @param n The value to count bits in.
+    ///
     /// @return The number of bits set to 1.
     constexpr BASALT_FORCE_INLINE uint64_t BitCount64(uint64_t n) noexcept
     {
@@ -170,6 +254,7 @@ namespace bslt::bits
     /// @brief Calculates the population count (number of set bits) in a 32-bit integer.
     ///
     /// @param n The value to count bits in.
+    ///
     /// @return The number of bits set to 1.
     constexpr BASALT_FORCE_INLINE uint32_t BitCount32(uint32_t n) noexcept
     {
@@ -188,6 +273,7 @@ namespace bslt::bits
     /// @brief Calculates the population count (number of set bits) in a 16-bit integer.
     ///
     /// @param n The value to count bits in.
+    ///
     /// @return The number of bits set to 1.
     constexpr BASALT_FORCE_INLINE uint16_t BitCount16(uint16_t n) noexcept
     {
@@ -204,6 +290,7 @@ namespace bslt::bits
     /// @brief Calculates the population count (number of set bits) in an 8-bit integer.
     ///
     /// @param n The value to count bits in.
+    ///
     /// @return The number of bits set to 1.
     constexpr BASALT_FORCE_INLINE uint8_t BitCount8(uint8_t n) noexcept
     {
@@ -216,11 +303,45 @@ namespace bslt::bits
 #endif // BASALT_USE_STD_BIT
     }
 
+    /// @brief Generic template to calculate the population count for any unsigned integer type.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param n The value to count bits in.
+    ///
+    /// @return The number of bits set to 1.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+    constexpr BASALT_FORCE_INLINE T BitCount(const T n) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return BitCount64(n);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return BitCount32(n);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return BitCount16(n);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return BitCount8(n);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for BitCount");
+        }
+    }
+
     /// @brief Isolates the least significant bit of a 64-bit integer.
     ///
     /// If n is 0, returns 0. Otherwise, returns a value with only the least significant bit of n set.
     ///
     /// @param n The value to process.
+    ///
     /// @return A value with only the least significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint64_t LeastSignificantBitWord64(const uint64_t n) noexcept
     {
@@ -232,6 +353,7 @@ namespace bslt::bits
     /// If n is 0, returns 0. Otherwise, returns a value with only the least significant bit of n set.
     ///
     /// @param n The value to process.
+    ///
     /// @return A value with only the least significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint32_t LeastSignificantBitWord32(const uint32_t n) noexcept
     {
@@ -243,6 +365,7 @@ namespace bslt::bits
     /// If n is 0, returns 0. Otherwise, returns a value with only the least significant bit of n set.
     ///
     /// @param n The value to process.
+    ///
     /// @return A value with only the least significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint16_t LeastSignificantBitWord16(const uint16_t n) noexcept
     {
@@ -254,6 +377,7 @@ namespace bslt::bits
     /// If n is 0, returns 0. Otherwise, returns a value with only the least significant bit of n set.
     ///
     /// @param n The value to process.
+    ///
     /// @return A value with only the least significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint8_t LeastSignificantBitWord8(const uint8_t n) noexcept
     {
@@ -263,6 +387,7 @@ namespace bslt::bits
     /// @brief Generic template to isolate the least significant bit of any unsigned integer type.
     ///
     /// @param n The value to process.
+    ///
     /// @return A value with only the least significant bit of n set.
     template <typename T>
         requires std::is_unsigned_v<T>
@@ -276,7 +401,9 @@ namespace bslt::bits
     /// This is a compile-time capable fallback for architectures without native CTZ intrinsics.
     ///
     /// @param n The 64-bit integer to check. Must not be 0.
+    ///
     /// @return The 0-based index of the least significant bit (0-63).
+    ///
     /// @note The behavior is undefined if n is 0.
     constexpr BASALT_FORCE_INLINE int LeastSignificantBitPosition64DeBruijn(const uint64_t n) noexcept
     {
@@ -298,20 +425,16 @@ namespace bslt::bits
     /// Uses hardware intrinsics (bsf/ctz) where available, falling back to De Bruijn multiplication.
     ///
     /// @param value The value to scan. Must not be 0.
+    ///
     /// @return The 0-based index of the least significant bit (0-63).
+    ///
     /// @note The behavior is undefined if value is 0.
-    BASALT_FORCE_INLINE uint64_t LeastSignificantBitPosition64(const uint64_t value) noexcept
+    constexpr BASALT_FORCE_INLINE uint64_t LeastSignificantBitPosition64(const uint64_t value) noexcept
     {
         DCHECK_NE(value, 0ULL) << "LSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint64_t>(std::countr_zero(value));
-#elif defined(__GNUC__) || defined(__llvm__)
-        return __builtin_ctzll(value);
-#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
-        unsigned long index = 0;
-        _BitScanForward64(&index, value);
-        return index;
 #else
         return LeastSignificantBitPosition64DeBruijn(value);
 #endif
@@ -320,20 +443,16 @@ namespace bslt::bits
     /// @brief Returns the index of the least significant bit set in a 32-bit integer.
     ///
     /// @param value The value to scan. Must not be 0.
+    ///
     /// @return The 0-based index of the least significant bit (0-31).
+    ///
     /// @note The behavior is undefined if value is 0.
-    BASALT_FORCE_INLINE uint32_t LeastSignificantBitPosition32(const uint32_t value) noexcept
+    constexpr BASALT_FORCE_INLINE uint32_t LeastSignificantBitPosition32(const uint32_t value) noexcept
     {
         DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint32_t>(std::countr_zero(value));
-#elif defined(__GNUC__) || defined(__llvm__)
-        return __builtin_ctz(value);
-#elif defined(_MSC_VER)
-        unsigned long index = 0;
-        _BitScanForward(&index, value);
-        return index;
 #else
         return static_cast<uint32_t>(LeastSignificantBitPosition64(static_cast<uint64_t>(value)));
 #endif // defined(__GNUC__) || defined(__llvm__)
@@ -342,8 +461,9 @@ namespace bslt::bits
     /// @brief Returns the index of the least significant bit set in a 16-bit integer.
     ///
     /// @param value The value to scan. Must not be 0.
+    ///
     /// @return The 0-based index of the least significant bit (0-15).
-    BASALT_FORCE_INLINE uint16_t LeastSignificantBitPosition16(const uint16_t value) noexcept
+    constexpr BASALT_FORCE_INLINE uint16_t LeastSignificantBitPosition16(const uint16_t value) noexcept
     {
         DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
 
@@ -357,8 +477,9 @@ namespace bslt::bits
     /// @brief Returns the index of the least significant bit set in an 8-bit integer.
     ///
     /// @param value The value to scan. Must not be 0.
+    ///
     /// @return The 0-based index of the least significant bit (0-7).
-    BASALT_FORCE_INLINE uint8_t LeastSignificantBitPosition8(const uint8_t value) noexcept
+    constexpr BASALT_FORCE_INLINE uint8_t LeastSignificantBitPosition8(const uint8_t value) noexcept
     {
         DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
 #if BASALT_USE_STD_BIT
@@ -373,7 +494,9 @@ namespace bslt::bits
     /// Dispatches to the appropriate size-specific implementation.
     ///
     /// @tparam T An unsigned integer type.
+    ///
     /// @param value The value to scan.
+    ///
     /// @return The 0-based index of the least significant bit.
     // ReSharper disable once CppNotAllPathsReturnValue
     template <typename T>
@@ -403,7 +526,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the local bit index within a 64-bit word.
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The local bit index (pos % 64).
     constexpr BASALT_FORCE_INLINE uint32_t BitPosition64(const uint64_t pos) noexcept
     {
@@ -411,7 +536,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the local bit index within a 32-bit word.
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The local bit index (pos % 32).
     constexpr BASALT_FORCE_INLINE uint32_t BitPosition32(const uint64_t pos) noexcept
     {
@@ -419,7 +546,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the local bit index within a 16-bit word.
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The local bit index (pos % 16).
     constexpr BASALT_FORCE_INLINE uint32_t BitPosition16(const uint64_t pos) noexcept
     {
@@ -427,7 +556,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the local bit index within an 8-bit word.
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The local bit index (pos % 8).
     constexpr BASALT_FORCE_INLINE uint32_t BitPosition8(const uint64_t pos) noexcept
     {
@@ -437,7 +568,9 @@ namespace bslt::bits
     /// @brief Generic template to calculate local bit index within a storage type T.
     ///
     /// @tparam T The underlying storage type (e.g., uint64_t, uint8_t).
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The 0-based index relative to the storage unit.
     // ReSharper disable once CppNotAllPathsReturnValue
     template <typename T>
@@ -467,7 +600,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the array index for a global bit position in a uint64_t array.
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The index of the uint64_t element containing the bit.
     constexpr BASALT_FORCE_INLINE uint64_t BitOffset64(const uint64_t pos) noexcept
     {
@@ -475,7 +610,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the array index for a global bit position in a uint32_t array.
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The index of the uint32_t element containing the bit.
     constexpr BASALT_FORCE_INLINE uint64_t BitOffset32(const uint64_t pos) noexcept
     {
@@ -483,7 +620,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the array index for a global bit position in a uint16_t array.
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The index of the uint16_t element containing the bit.
     constexpr BASALT_FORCE_INLINE uint64_t BitOffset16(const uint64_t pos) noexcept
     {
@@ -491,7 +630,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the array index for a global bit position in a uint8_t array.
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The index of the uint8_t element containing the bit.
     constexpr BASALT_FORCE_INLINE uint64_t BitOffset8(const uint64_t pos) noexcept
     {
@@ -501,7 +642,9 @@ namespace bslt::bits
     /// @brief Generic template to calculate the array index for a storage type T.
     ///
     /// @tparam T The underlying storage type (e.g., uint64_t, uint8_t).
+    ///
     /// @param pos The global bit index.
+    ///
     /// @return The index of the element of type T containing the bit.
     // ReSharper disable once CppNotAllPathsReturnValue
     template <typename T>
@@ -531,7 +674,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the number of uint64_t elements needed to store a given number of bits.
+    ///
     /// @param size The total number of bits.
+    ///
     /// @return The number of uint64_t elements required.
     constexpr BASALT_FORCE_INLINE uint64_t BitLength64(const uint64_t size) noexcept
     {
@@ -539,7 +684,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the number of uint32_t elements needed to store a given number of bits.
+    ///
     /// @param size The total number of bits.
+    ///
     /// @return The number of uint32_t elements required.
     constexpr BASALT_FORCE_INLINE uint64_t BitLength32(const uint64_t size) noexcept
     {
@@ -547,7 +694,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the number of uint16_t elements needed to store a given number of bits.
+    ///
     /// @param size The total number of bits.
+    ///
     /// @return The number of uint16_t elements required.
     constexpr BASALT_FORCE_INLINE uint64_t BitLength16(const uint64_t size) noexcept
     {
@@ -555,7 +704,9 @@ namespace bslt::bits
     }
 
     /// @brief Calculates the number of uint8_t elements needed to store a given number of bits.
+    ///
     /// @param size The total number of bits.
+    ///
     /// @return The number of uint8_t elements required.
     constexpr BASALT_FORCE_INLINE uint64_t BitLength8(const uint64_t size) noexcept
     {
@@ -565,7 +716,9 @@ namespace bslt::bits
     /// @brief Generic template to calculate the allocation size for storage type T.
     ///
     /// @tparam T The underlying storage type (e.g., uint64_t, uint8_t).
+    ///
     /// @param size The total number of bits.
+    ///
     /// @return The number of elements of type T required to hold 'size' bits.
     // ReSharper disable once CppNotAllPathsReturnValue
     template <typename T>
