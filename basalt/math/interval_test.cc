@@ -49,6 +49,7 @@ namespace bslt::test
     {
     };
 
+    // ReSharper disable once CppDFATimeOver
     TYPED_TEST_SUITE(ClosedOpenIntervalTypedTest, TestTypes);
 
     TYPED_TEST(ClosedOpenIntervalTypedTest, WorksForBTreeSet)

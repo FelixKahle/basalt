@@ -26,7 +26,7 @@
 #include "gtest/gtest.h"
 #include "basalt/utils/bits.h"
 
-namespace bslt::bits
+namespace bslt::bits::test
 {
     // Constants
     static_assert(kAllBits64 == 0xFFFFFFFFFFFFFFFFULL, "kAllBits64 failed");
@@ -63,6 +63,19 @@ namespace bslt::bits
     static_assert(LeastSignificantBitPosition32(1U << 31) == 31, "LSBPos32 failed");
     static_assert(LeastSignificantBitPosition16(1U << 15) == 15, "LSBPos16 failed");
     static_assert(LeastSignificantBitPosition8(1U << 7) == 7, "LSBPos8 failed");
+
+    // MostSignificantBitWord
+    static_assert(MostSignificantBitWord64(0xFFFF000000000000ULL) == 0x8000000000000000ULL, "MSBWord64 failed");
+    static_assert(MostSignificantBitWord32(0x00F00000U) == 0x00800000U, "MSBWord32 failed");
+    static_assert(MostSignificantBitWord16(0x0030U) == 0x0020U, "MSBWord16 failed");
+    static_assert(MostSignificantBitWord8(0x03U) == 0x02U, "MSBWord8 failed");
+
+    // MostSignificantBitPosition
+    static_assert(MostSignificantBitPosition64(0x8000000000000000ULL) == 63, "MSBPos64 failed");
+    static_assert(MostSignificantBitPosition64(3ULL) == 1, "MSBPos64 small value failed");
+    static_assert(MostSignificantBitPosition32(0x80000000U) == 31, "MSBPos32 failed");
+    static_assert(MostSignificantBitPosition16(0x00FFU) == 7, "MSBPos16 failed");
+    static_assert(MostSignificantBitPosition8(0x01U) == 0, "MSBPos8 failed");
 
     // BitPosition (Index within word)
     static_assert(BitPosition64(65) == 1, "BitPosition64 failed");
@@ -177,6 +190,53 @@ namespace bslt::bits
         }
     }
 
+    TYPED_TEST(BitUtilsTypedTest, MostSignificantBitPosition)
+    {
+        using T = TypeParam;
+        constexpr uint32_t kBits = sizeof(T) * 8;
+
+        for (uint32_t i = 0; i < kBits; ++i)
+        {
+            T val = BitMask<T>(i);
+
+            // Case 1: Exact power of 2
+            EXPECT_EQ(MostSignificantBitPosition<T>(val), i);
+
+            // Case 2: Add noise BELOW the MSB
+            if (i > 0)
+            {
+                T noise = static_cast<T>(val | (val - 1));
+                EXPECT_EQ(MostSignificantBitPosition<T>(noise), i)
+                    << "Failed with lower-bit noise at index " << i;
+            }
+        }
+    }
+
+    TYPED_TEST(BitUtilsTypedTest, MostSignificantBitWord)
+    {
+        using T = TypeParam;
+        constexpr uint32_t kBits = sizeof(T) * 8;
+
+        for (uint32_t i = 0; i < kBits; ++i)
+        {
+            T expectedMsb = BitMask<T>(i); // The single bit at position i
+
+            // Case 1: Exact power of 2
+            // The MSB Word of a power of 2 is the value itself.
+            EXPECT_EQ(MostSignificantBitWord<T>(expectedMsb), expectedMsb);
+
+            // Case 2: Add noise BELOW the MSB
+            // e.g., if MSB is at 4 (10000), adding 01111 (15) -> 11111.
+            // The MSB Word should still be 10000.
+            if (i > 0)
+            {
+                T noise = static_cast<T>(expectedMsb | (expectedMsb - 1));
+                EXPECT_EQ(MostSignificantBitWord<T>(noise), expectedMsb)
+                    << "Failed with lower-bit noise at index " << i;
+            }
+        }
+    }
+
     TYPED_TEST(BitUtilsTypedTest, BitPosition)
     {
         using T = TypeParam;
@@ -263,6 +323,34 @@ namespace bslt::bits
         EXPECT_EQ(LeastSignificantBitPosition8(12), 2);
     }
 
+    TEST(ExplicitApiTest, MSBPosition)
+    {
+        // 12 = 1100 binary, MSB is at index 3
+        EXPECT_EQ(MostSignificantBitPosition64(12), 3);
+        EXPECT_EQ(MostSignificantBitPosition32(12), 3);
+        EXPECT_EQ(MostSignificantBitPosition16(12), 3);
+        EXPECT_EQ(MostSignificantBitPosition8(12), 3);
+
+        // 1 = 0001 binary, MSB is at index 0
+        EXPECT_EQ(MostSignificantBitPosition32(1), 0);
+    }
+
+    TEST(ExplicitApiTest, MSBWord)
+    {
+        // 0b00001100 (12) -> MSB is 0b00001000 (8)
+        EXPECT_EQ(MostSignificantBitWord64(12), 8);
+        EXPECT_EQ(MostSignificantBitWord32(12), 8);
+        EXPECT_EQ(MostSignificantBitWord16(12), 8);
+        EXPECT_EQ(MostSignificantBitWord8(12), 8);
+
+        // Edge Case: Max value
+        // 0xFF (255) -> MSB is 0x80 (128)
+        EXPECT_EQ(MostSignificantBitWord8(255), 128);
+
+        // Edge Case: Smallest non-zero
+        EXPECT_EQ(MostSignificantBitWord64(1), 1);
+    }
+
     TEST(ExplicitApiTest, DeBruijnFallback)
     {
         // Explicitly test the DeBruijn fallback function for 64-bit
@@ -286,10 +374,6 @@ namespace bslt::bits
         EXPECT_EQ(BitLength8(9), 2);
     }
 
-    // =================================================================================================
-    // 4. Death Tests (Debug Only)
-    // =================================================================================================
-
 #ifndef NDEBUG
     TEST(BitUtilsDeathTest, LSBZeroInput)
     {
@@ -300,6 +384,21 @@ namespace bslt::bits
         EXPECT_DEATH(LeastSignificantBitPosition16(0), "LSB position is undefined");
         EXPECT_DEATH(LeastSignificantBitPosition8(0), "LSB position is undefined");
         EXPECT_DEATH(LeastSignificantBitPosition64DeBruijn(0), "LSB position is undefined");
+    }
+
+    TEST(BitUtilsDeathTest, MSBZeroInput)
+    {
+        // MSB is mathematically undefined for 0.
+        // The library uses DCHECK_NE.
+        EXPECT_DEATH(MostSignificantBitWord64(0), "MSB word is undefined");
+        EXPECT_DEATH(MostSignificantBitWord32(0), "MSB word is undefined");
+        EXPECT_DEATH(MostSignificantBitWord16(0), "MSB word is undefined");
+        EXPECT_DEATH(MostSignificantBitWord8(0), "MSB word is undefined");
+
+        EXPECT_DEATH(MostSignificantBitPosition64(0), "MSB position is undefined");
+        EXPECT_DEATH(MostSignificantBitPosition32(0), "MSB position is undefined");
+        EXPECT_DEATH(MostSignificantBitPosition16(0), "MSB position is undefined");
+        EXPECT_DEATH(MostSignificantBitPosition8(0), "MSB position is undefined");
     }
 
     TEST(BitUtilsDeathTest, MaskOutOfBounds)
@@ -313,7 +412,7 @@ namespace bslt::bits
 
     // Helper to calculate LSB naively to verify optimized implementations
     template <typename T>
-    int NaiveLSB(T n)
+    static int NaiveLSB(T n)
     {
         if (n == 0) return 0; // Should not happen in test generation
         for (int i = 0; i < static_cast<int>(sizeof(T) * 8); ++i)
@@ -321,6 +420,18 @@ namespace bslt::bits
             if ((n >> i) & 1) return i;
         }
         return -1;
+    }
+
+    template <typename T>
+    static int NaiveMSB(T n)
+    {
+        if (n == 0) return 0;
+        int msbIndex = 0;
+        while (n >>= 1)
+        {
+            msbIndex++;
+        }
+        return msbIndex;
     }
 
     TEST(BitUtilsFuzzTest, PopCount64AgainstBitset)
@@ -369,6 +480,57 @@ namespace bslt::bits
         {
             uint32_t val = dist(rng);
             EXPECT_EQ(LeastSignificantBitPosition32(val), NaiveLSB(val));
+        }
+    }
+
+    TEST(BitUtilsFuzzTest, MSBPos64AgainstNaive)
+    {
+        std::mt19937_64 rng(999); // NOLINT(*-msc51-cpp)
+        // Range starts at 1 because MSB(0) is undefined
+        std::uniform_int_distribution<uint64_t> dist(1, std::numeric_limits<uint64_t>::max());
+
+        for (int i = 0; i < 1000; ++i)
+        {
+            uint64_t val = dist(rng);
+            EXPECT_EQ(MostSignificantBitPosition64(val), NaiveMSB(val))
+                << "Failed for value: " << val;
+        }
+    }
+
+    TEST(BitUtilsFuzzTest, MSBPos32AgainstNaive)
+    {
+        std::mt19937 rng(999); // NOLINT(*-msc51-cpp)
+        std::uniform_int_distribution<uint32_t> dist(1, std::numeric_limits<uint32_t>::max());
+
+        for (int i = 0; i < 1000; ++i)
+        {
+            uint32_t val = dist(rng);
+            EXPECT_EQ(MostSignificantBitPosition32(val), NaiveMSB(val))
+                << "Failed for value: " << val;
+        }
+    }
+
+    TEST(BitUtilsFuzzTest, MSBWord64Correctness)
+    {
+        std::mt19937_64 rng(888); // NOLINT(*-msc51-cpp)
+        std::uniform_int_distribution<uint64_t> dist(1, std::numeric_limits<uint64_t>::max());
+
+        for (int i = 0; i < 1000; ++i)
+        {
+            uint64_t val = dist(rng);
+            uint64_t msbWord = MostSignificantBitWord64(val);
+
+            // Check 1: The result is a power of 2 (only 1 bit set)
+            EXPECT_EQ(BitCount64(msbWord), 1);
+
+            // Check 2: The result is <= original value
+            EXPECT_LE(msbWord, val);
+
+            // Check 3: Doubling the result (if no overflow) should be > original value
+            if (msbWord != (1ULL << 63))
+            {
+                EXPECT_GT(msbWord << 1, val);
+            }
         }
     }
 }

@@ -36,11 +36,19 @@
 #define BASALT_COMPILER_SUPPORTS_CONSTEXPR 0
 #endif // __cpp_constexpr
 
+#if !BASALT_COMPILER_SUPPORTS_CONSTEXPR
+#error "Basalt requires compiler support for constexpr."
+#endif // !BASALT_COMPILER_SUPPORTS_CONSTEXPR
+
 #ifdef __cpp_concepts
 #define BASALT_COMPILER_SUPPORTS_CONCEPTS 1
 #else
 #define BASALT_COMPILER_SUPPORTS_CONCEPTS 0
 #endif // __cpp_concepts
+
+#if !BASALT_COMPILER_SUPPORTS_CONCEPTS
+#error "Basalt requires compiler support for C++20 concepts."
+#endif // !BASALT_COMPILER_SUPPORTS_CONCEPTS
 
 #ifdef __cpp_guaranteed_copy_elision
 #define BASALT_COMPILER_SUPPORTS_GUARANTEED_COPY_ELISION 1
@@ -49,6 +57,7 @@
 #endif // __cpp_guaranteed_copy_elision
 
 #ifndef BASALT_ALLOW_FORCE_INLINE
+// Default to allowing force inline
 #define BASALT_ALLOW_FORCE_INLINE 1
 #endif // BASALT_ALLOW_FORCE_INLINE
 

@@ -36,7 +36,8 @@
 
 // The std implementation is just superior.
 #if !BASALT_USE_STD_BIT
-#warning "Using custom bit operations implementation. Consider enabling C++20 or later for std::bit support."
+#warning "Using custom bit operations implementation. std::bit operations are considered superior, " \
+         "please consider enabling BASALT_USE_STD_BIT."
 #endif // !BASALT_USE_STD_BIT
 
 #include <limits>
@@ -52,7 +53,7 @@ namespace bslt::bits
     // Useful bitmask constants
 
     constexpr uint64_t kAllBits64 = std::numeric_limits<uint64_t>::max();
-    constexpr uint64_t kAllBitsButLsb64 = kAllBits64 ^ 1ULL; // or kAllBits64 - 1
+    constexpr uint64_t kAllBitsButLsb64 = kAllBits64 ^ 1ULL;
 
     constexpr uint32_t kAllBits32 = std::numeric_limits<uint32_t>::max();
     constexpr uint32_t kAllBitsButLsb32 = kAllBits32 ^ 1U;
@@ -399,6 +400,8 @@ namespace bslt::bits
     /// @brief Calculates the index of the least significant bit using a De Bruijn sequence.
     ///
     /// This is a compile-time capable fallback for architectures without native CTZ intrinsics.
+    /// The De Bruijn sequence method provides a fast way to determine the position of the least significant bit,
+    /// for more details see: <a href="https://en.wikipedia.org/wiki/De_Bruijn_sequence">De Bruijn</a>.
     ///
     /// @param n The 64-bit integer to check. Must not be 0.
     ///
@@ -501,7 +504,7 @@ namespace bslt::bits
     // ReSharper disable once CppNotAllPathsReturnValue
     template <typename T>
         requires std::is_unsigned_v<T>
-    BASALT_FORCE_INLINE T LeastSignificantBitPosition(const T value) noexcept
+    constexpr BASALT_FORCE_INLINE T LeastSignificantBitPosition(const T value) noexcept
     {
         if constexpr (std::is_same_v<T, uint64_t>)
         {
@@ -522,6 +525,322 @@ namespace bslt::bits
         else
         {
             static_assert(sizeof(T) == 0, "Unsupported type for LeastSignificantBitPosition");
+        }
+    }
+
+    /// @brief Isolates the most significant bit of a 64-bit integer.
+    ///
+    /// @param n The value to check.
+    ///
+    /// @return A value with only the most significant bit of n set.
+    constexpr BASALT_FORCE_INLINE uint64_t MostSignificantBitWord64(const uint64_t n) noexcept
+    {
+        DCHECK_NE(n, 0ULL) << "MSB word is undefined for value 0";
+
+#if BASALT_USE_STD_BIT
+        return std::bit_floor(n);
+#else
+        uint64_t x = n;
+        x |= x >> 1;
+        x |= x >> 2;
+        x |= x >> 4;
+        x |= x >> 8;
+        x |= x >> 16;
+        x |= x >> 32;
+        return x - (x >> 1);
+#endif
+    }
+
+    /// @brief Isolates the most significant bit of a 32-bit integer.
+    ///
+    /// @param n The value to check.
+    ///
+    /// @return A value with only the most significant bit of n set.
+    constexpr BASALT_FORCE_INLINE uint32_t MostSignificantBitWord32(const uint32_t n) noexcept
+    {
+        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+
+#if BASALT_USE_STD_BIT
+        return std::bit_floor(n);
+#else
+        uint32_t x = n;
+        x |= x >> 1;
+        x |= x >> 2;
+        x |= x >> 4;
+        x |= x >> 8;
+        x |= x >> 16;
+        return x - (x >> 1);
+#endif
+    }
+
+    /// @brief Isolates the most significant bit of a 16-bit integer.
+    ///
+    /// @param n The value to check.
+    ///
+    /// @return A value with only the most significant bit of n set.
+    constexpr BASALT_FORCE_INLINE uint16_t MostSignificantBitWord16(const uint16_t n) noexcept
+    {
+        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+
+#if BASALT_USE_STD_BIT
+        return std::bit_floor(n);
+#else
+        // Casts are necessary to prevent integer promotion (int) during shifts.
+        uint16_t x = n;
+        x = static_cast<uint16_t>(x | (x >> 1));
+        x = static_cast<uint16_t>(x | (x >> 2));
+        x = static_cast<uint16_t>(x | (x >> 4));
+        x = static_cast<uint16_t>(x | (x >> 8));
+        return static_cast<uint16_t>(x - (x >> 1));
+#endif
+    }
+
+    /// @brief Isolates the most significant bit of an 8-bit integer.
+    ///
+    /// @param n The value to check.
+    ///
+    /// @return A value with only the most significant bit of n set.
+    constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitWord8(const uint8_t n) noexcept
+    {
+        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+
+#if BASALT_USE_STD_BIT
+        return std::bit_floor(n);
+#else
+        uint8_t x = n;
+        x = static_cast<uint8_t>(x | (x >> 1));
+        x = static_cast<uint8_t>(x | (x >> 2));
+        x = static_cast<uint8_t>(x | (x >> 4));
+        return static_cast<uint8_t>(x - (x >> 1));
+#endif
+    }
+
+    /// @brief Generic template to isolate the most significant bit of any unsigned integer type.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param n The value to process.
+    ///
+    /// @return A value of type T with only the most significant bit of n set.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE T MostSignificantBitWord(const T n) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return MostSignificantBitWord64(n);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return MostSignificantBitWord32(n);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return MostSignificantBitWord16(n);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return MostSignificantBitWord8(n);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for MostSignificantBitWord");
+        }
+    }
+
+
+    /// @brief Calculates the index of the most significant bit in a 64-bit integer.
+    ///
+    /// @param n The value to check.
+    ///
+    /// @return The 0-based index of the most significant bit (0-63).
+    constexpr BASALT_FORCE_INLINE uint64_t MostSignificantBitPosition64(uint64_t n) noexcept
+    {
+        DCHECK_NE(n, 0ULL) << "MSB position is undefined for value 0";
+
+#if BASALT_USE_STD_BIT
+        return static_cast<uint64_t>(std::bit_width(n) - 1);
+#else
+        int b = 0;
+        if (0 != (n & (kAllBits64 << (1 << 5))))
+        {
+            b |= (1 << 5);
+            n >>= (1 << 5);
+        }
+        if (0 != (n & (kAllBits64 << (1 << 4))))
+        {
+            b |= (1 << 4);
+            n >>= (1 << 4);
+        }
+        if (0 != (n & (kAllBits64 << (1 << 3))))
+        {
+            b |= (1 << 3);
+            n >>= (1 << 3);
+        }
+        if (0 != (n & (kAllBits64 << (1 << 2))))
+        {
+            b |= (1 << 2);
+            n >>= (1 << 2);
+        }
+        if (0 != (n & (kAllBits64 << (1 << 1))))
+        {
+            b |= (1 << 1);
+            n >>= (1 << 1);
+        }
+        if (0 != (n & (kAllBits64 << (1 << 0))))
+        {
+            b |= (1 << 0);
+        }
+        return b;
+#endif
+    }
+
+    /// @brief Calculates the index of the most significant bit in a 32-bit integer.
+    ///
+    /// @param n The value to check.
+    ///
+    /// @return The 0-based index of the most significant bit (0-31).
+    constexpr BASALT_FORCE_INLINE uint32_t MostSignificantBitPosition32(uint32_t n) noexcept
+    {
+        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+
+#if BASALT_USE_STD_BIT
+        return static_cast<uint32_t>(std::bit_width(n) - 1);
+#else
+        int b = 0;
+        if (0 != (n & (kAllBits32 << (1 << 4))))
+        {
+            b |= (1 << 4);
+            n >>= (1 << 4);
+        }
+        if (0 != (n & (kAllBits32 << (1 << 3))))
+        {
+            b |= (1 << 3);
+            n >>= (1 << 3);
+        }
+        if (0 != (n & (kAllBits32 << (1 << 2))))
+        {
+            b |= (1 << 2);
+            n >>= (1 << 2);
+        }
+        if (0 != (n & (kAllBits32 << (1 << 1))))
+        {
+            b |= (1 << 1);
+            n >>= (1 << 1);
+        }
+        if (0 != (n & (kAllBits32 << (1 << 0))))
+        {
+            b |= (1 << 0);
+        }
+        return b;
+#endif
+    }
+
+    /// @brief Returns the index of the most significant bit set in a 16-bit integer.
+    ///
+    /// @param n The value to scan. Must not be 0.
+    ///
+    /// @return The 0-based index of the most significant bit (0-15).
+    constexpr BASALT_FORCE_INLINE uint16_t MostSignificantBitPosition16(uint16_t n) noexcept
+    {
+        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+
+#if BASALT_USE_STD_BIT
+        return static_cast<uint16_t>(std::bit_width(n) - 1);
+#else
+        uint16_t v = n; // Create mutable copy for shifting
+        int b = 0;
+
+        if (0 != (v & (kAllBits16 << (1 << 3)))) // Check top 8 bits
+        {
+            b |= (1 << 3);
+            v >>= (1 << 3);
+        }
+        if (0 != (v & (kAllBits16 << (1 << 2)))) // Check top 4 bits
+        {
+            b |= (1 << 2);
+            v >>= (1 << 2);
+        }
+        if (0 != (v & (kAllBits16 << (1 << 1)))) // Check top 2 bits
+        {
+            b |= (1 << 1);
+            v >>= (1 << 1);
+        }
+        if (0 != (v & (kAllBits16 << (1 << 0)))) // Check top 1 bit
+        {
+            b |= (1 << 0);
+        }
+        return static_cast<uint16_t>(b);
+#endif
+    }
+
+    /// @brief Returns the index of the most significant bit set in an 8-bit integer.
+    ///
+    /// @param n The value to scan. Must not be 0.
+    ///
+    /// @return The 0-based index of the most significant bit (0-7).
+    constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitPosition8(const uint8_t n) noexcept
+    {
+        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+
+#if BASALT_USE_STD_BIT
+        return static_cast<uint8_t>(std::bit_width(n) - 1);
+#else
+        uint8_t v = n; // Create mutable copy for shifting
+        int b = 0;
+
+        if (0 != (v & (kAllBits8 << (1 << 2)))) // Check top 4 bits
+        {
+            b |= (1 << 2);
+            v >>= (1 << 2);
+        }
+        if (0 != (v & (kAllBits8 << (1 << 1)))) // Check top 2 bits
+        {
+            b |= (1 << 1);
+            v >>= (1 << 1);
+        }
+        if (0 != (v & (kAllBits8 << (1 << 0)))) // Check top 1 bit
+        {
+            b |= (1 << 0);
+        }
+        return static_cast<uint8_t>(b);
+#endif
+    }
+
+    /// @brief Generic template to find the MSB index of any unsigned integer type.
+    ///
+    /// Dispatches to the appropriate size-specific implementation.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param value The value to scan.
+    ///
+    /// @return The 0-based index of the most significant bit.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    BASALT_FORCE_INLINE T MostSignificantBitPosition(const T value) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return MostSignificantBitPosition64(value);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return MostSignificantBitPosition32(value);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return MostSignificantBitPosition16(value);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return MostSignificantBitPosition8(value);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for MostSignificantBitPosition");
         }
     }
 
