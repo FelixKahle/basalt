@@ -40,11 +40,24 @@ namespace bslt::bits::test
     static_assert(BitMask16(15) == 0x8000U, "BitMask16 failed");
     static_assert(BitMask8(7) == 0x80U, "BitMask8 failed");
 
+    // BitMaskRange
+    static_assert(BitMaskRange64(0, 63) == 0xFFFFFFFFFFFFFFFFULL, "BitMaskRange64 full failed");
+    static_assert(BitMaskRange64(1, 3) == 0x0EULL, "BitMaskRange64 subset failed");
+    static_assert(BitMaskRange32(8, 15) == 0x0000FF00U, "BitMaskRange32 middle failed");
+    static_assert(BitMaskRange16(0, 0) == 0x0001U, "BitMaskRange16 single bit failed");
+    static_assert(BitMaskRange8(4, 7) == 0xF0U, "BitMaskRange8 upper half failed");
+
     // InverseBitMask
     static_assert(InverseBitMask64(0) == 0xFFFFFFFFFFFFFFFEULL, "InverseBitMask64 failed");
     static_assert(InverseBitMask32(0) == 0xFFFFFFFEU, "InverseBitMask32 failed");
     static_assert(InverseBitMask16(0) == 0xFFFEU, "InverseBitMask16 failed");
     static_assert(InverseBitMask8(0) == 0xFEU, "InverseBitMask8 failed");
+
+    // InverseBitMaskRange
+    static_assert(InverseBitMaskRange64(0, 63) == 0ULL, "InverseBitMaskRange64 full failed");
+    static_assert(InverseBitMaskRange32(0, 31) == 0U, "InverseBitMaskRange32 full failed");
+    static_assert(InverseBitMaskRange16(4, 7) == 0xFF0FU, "InverseBitMaskRange16 middle failed");
+    static_assert(InverseBitMaskRange8(0, 3) == 0xF0U, "InverseBitMaskRange8 lower half failed");
 
     // BitCount
     static_assert(BitCount64(0x0000FFFF0000FFFFULL) == 32, "BitCount64 failed");
@@ -94,6 +107,18 @@ namespace bslt::bits::test
     static_assert(BitLength32(65) == 3, "BitLength32 failed");
     static_assert(BitLength16(33) == 3, "BitLength16 failed");
     static_assert(BitLength8(17) == 3, "BitLength8 failed");
+
+    // IntervalUp (Masks from S up to MSB)
+    static_assert(IntervalUp64(0) == kAllBits64, "IntervalUp64 full failed");
+    static_assert(IntervalUp64(63) == 0x8000000000000000ULL, "IntervalUp64 msb failed");
+    static_assert(IntervalUp32(16) == 0xFFFF0000U, "IntervalUp32 half failed");
+    static_assert(IntervalUp8(4) == 0xF0U, "IntervalUp8 failed");
+
+    // IntervalDown (Masks from 0 up to S)
+    static_assert(IntervalDown64(63) == kAllBits64, "IntervalDown64 full failed");
+    static_assert(IntervalDown64(0) == 1ULL, "IntervalDown64 lsb failed");
+    static_assert(IntervalDown32(15) == 0x0000FFFFU, "IntervalDown32 half failed");
+    static_assert(IntervalDown8(3) == 0x0FU, "IntervalDown8 failed");
 
     template <typename T>
     class BitUtilsTypedTest : public ::testing::Test
@@ -274,6 +299,54 @@ namespace bslt::bits::test
         EXPECT_EQ(BitLength<T>(kBits * 2), 2);
     }
 
+    TYPED_TEST(BitUtilsTypedTest, BitMaskRangeCorrectness)
+    {
+        using T = TypeParam;
+        constexpr uint32_t kBits = sizeof(T) * 8;
+
+        // Test every possible valid range
+        for (uint32_t start = 0; start < kBits; ++start)
+        {
+            for (uint32_t end = start; end < kBits; ++end)
+            {
+                const T mask = BitMaskRange<T>(start, end);
+                const T inverse = InverseBitMaskRange<T>(start, end);
+
+                // 1. Verify Inverse is complement
+                EXPECT_EQ(mask, static_cast<T>(~inverse));
+
+                // 2. Verify manually
+                T expected = 0;
+                for (uint32_t i = start; i <= end; ++i)
+                {
+                    expected |= static_cast<T>(T{1} << i);
+                }
+                EXPECT_EQ(mask, expected) << "Range [" << start << ", " << end << "]";
+            }
+        }
+    }
+
+    TYPED_TEST(BitUtilsTypedTest, IntervalCorrectness)
+    {
+        using T = TypeParam;
+        constexpr uint32_t kBits = sizeof(T) * 8;
+
+        for (uint32_t i = 0; i < kBits; ++i)
+        {
+            // IntervalUp(i) should equivalent to Range(i, max_bit)
+            // It sets bits [i, kBits-1]
+            T up = IntervalUp<T>(static_cast<T>(i));
+            T upRange = BitMaskRange<T>(i, kBits - 1);
+            EXPECT_EQ(up, upRange) << "IntervalUp(" << i << ")";
+
+            // IntervalDown(i) should be equivalent to Range(0, i)
+            // It sets bits [0, i]
+            T down = IntervalDown<T>(static_cast<T>(i));
+            T downRange = BitMaskRange<T>(0, i);
+            EXPECT_EQ(down, downRange) << "IntervalDown(" << i << ")";
+        }
+    }
+
     TEST(ExplicitApiTest, Constants)
     {
         EXPECT_EQ(kAllBits64, std::numeric_limits<uint64_t>::max());
@@ -374,6 +447,43 @@ namespace bslt::bits::test
         EXPECT_EQ(BitLength8(9), 2);
     }
 
+    TEST(ExplicitApiTest, RangeMasks)
+    {
+        // 64-bit
+        EXPECT_EQ(BitMaskRange64(0, 1), 3ULL);
+        EXPECT_EQ(BitMaskRange64(62, 63), 0xC000000000000000ULL);
+
+        // 32-bit
+        EXPECT_EQ(BitMaskRange32(0, 0), 1U);
+        EXPECT_EQ(BitMaskRange32(0, 31), 0xFFFFFFFFU);
+
+        // 16-bit
+        EXPECT_EQ(BitMaskRange16(4, 7), 0x00F0U);
+
+        // 8-bit
+        EXPECT_EQ(BitMaskRange8(1, 6), 0x7EU); // 01111110
+    }
+
+    TEST(ExplicitApiTest, InverseRangeMasks)
+    {
+        // Inverse of Range(0, 1) -> Inverse of ...00011 -> ...11100
+        EXPECT_EQ(InverseBitMaskRange64(0, 1), 0xFFFFFFFFFFFFFFFCULL);
+
+        // Inverse of Range(1, 6) 8-bit -> ~0x7E -> 0x81
+        EXPECT_EQ(InverseBitMaskRange8(1, 6), 0x81U);
+    }
+
+    TEST(ExplicitApiTest, Intervals)
+    {
+        // Up: [s, 63]
+        EXPECT_EQ(IntervalUp64(63), 0x8000000000000000ULL);
+        EXPECT_EQ(IntervalUp8(4), 0xF0U); // 11110000
+
+        // Down: [0, s]
+        EXPECT_EQ(IntervalDown64(0), 1ULL);
+        EXPECT_EQ(IntervalDown8(3), 0x0FU); // 00001111
+    }
+
 #ifndef NDEBUG
     TEST(BitUtilsDeathTest, LSBZeroInput)
     {
@@ -407,6 +517,30 @@ namespace bslt::bits::test
         EXPECT_DEATH(BitMask64(64), "Shift amount must be less than");
         EXPECT_DEATH(BitMask32(32), "Shift amount must be less than");
         EXPECT_DEATH(InverseBitMask16(16), "Shift amount must be less than");
+    }
+
+    TEST(BitUtilsDeathTest, RangeInvalid)
+    {
+        // Start > End
+        EXPECT_DEATH(BitMaskRange64(10, 5), "Start position must be less than or equal to end");
+        EXPECT_DEATH(BitMaskRange32(5, 4), "Start position must be less than or equal to end");
+
+        // Out of bounds
+        EXPECT_DEATH(BitMaskRange8(0, 8), "End position must be less than 8");
+        EXPECT_DEATH(BitMaskRange8(8, 9), "Start position must be less than 8");
+    }
+
+    TEST(BitUtilsDeathTest, InverseRangeInvalid)
+    {
+        EXPECT_DEATH(InverseBitMaskRange64(10, 5), "Start position must be less than or equal to end");
+        EXPECT_DEATH(InverseBitMaskRange8(0, 8), "End position must be less than 8");
+    }
+
+    TEST(BitUtilsDeathTest, IntervalInvalid)
+    {
+        // Shift exceeds bit width (Interval functions take shift amount s, must be < width)
+        EXPECT_DEATH(IntervalUp64(64), "Shift exceeds bit width"); // DCHECK_LE(s, 63)
+        EXPECT_DEATH(IntervalDown8(8), "Shift exceeds bit width"); // DCHECK_LE(s, 7)
     }
 #endif
 

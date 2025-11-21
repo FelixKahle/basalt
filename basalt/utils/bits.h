@@ -146,6 +146,101 @@ namespace bslt::bits
         }
     }
 
+    /// @brief Generates a bitmask with bits set between the start and end positions (inclusive) for a 64-bit integer.
+    ///
+    /// @param start The starting bit position to set (0-63).
+    /// @param end The ending bit position to set (0-63).
+    ///
+    /// @return A 64-bit integer with bits [start, end] set and others cleared.
+    constexpr BASALT_FORCE_INLINE uint64_t BitMaskRange64(const uint32_t start, const uint32_t end) noexcept
+    {
+        DCHECK_LE(start, 63) << "Start position must be less than 64";
+        DCHECK_LE(end, 63) << "End position must be less than 64";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+
+        return (kAllBits64 << start) ^ ((kAllBits64 - 1) << end);
+    }
+
+    /// @brief Generates a bitmask with bits set between the start and end positions (inclusive) for a 32-bit integer.
+    ///
+    /// @param start The starting bit position to set (0-31).
+    /// @param end The ending bit position to set (0-31).
+    ///
+    /// @return A 32-bit integer with bits [start, end] set and others cleared.
+    constexpr BASALT_FORCE_INLINE uint32_t BitMaskRange32(const uint32_t start, const uint32_t end) noexcept
+    {
+        DCHECK_LE(start, 31) << "Start position must be less than 32";
+        DCHECK_LE(end, 31) << "End position must be less than 32";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+
+        return (kAllBits32 << start) ^ ((kAllBits32 - 1) << end);
+    }
+
+    /// @brief Generates a bitmask with bits set between the start and end positions (inclusive) for a 16-bit integer.
+    ///
+    /// @param start The starting bit position to set (0-15).
+    /// @param end The ending bit position to set (0-15).
+    ///
+    /// @return A 16-bit integer with bits [start, end] set and others cleared.
+    constexpr BASALT_FORCE_INLINE uint16_t BitMaskRange16(const uint32_t start, const uint32_t end) noexcept
+    {
+        DCHECK_LE(start, 15) << "Start position must be less than 16";
+        DCHECK_LE(end, 15) << "End position must be less than 16";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+
+        return static_cast<uint16_t>((kAllBits16 << start) ^ ((kAllBits16 - 1) << end));
+    }
+
+    /// @brief Generates a bitmask with bits set between the start and end positions (inclusive) for an 8-bit integer.
+    ///
+    /// @param start The starting bit position to set (0-7).
+    /// @param end The ending bit position to set (0-7).
+    ///
+    /// @return An 8-bit integer with bits [start, end] set and others cleared.
+    constexpr BASALT_FORCE_INLINE uint8_t BitMaskRange8(const uint32_t start, const uint32_t end) noexcept
+    {
+        DCHECK_LE(start, 7) << "Start position must be less than 8";
+        DCHECK_LE(end, 7) << "End position must be less than 8";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+
+        return static_cast<uint8_t>((kAllBits8 << start) ^ ((kAllBits8 - 1) << end));
+    }
+
+    /// @brief Generic template to generate a bitmask range for any unsigned integer type.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param start The starting bit position to set.
+    /// @param end The ending bit position to set.
+    ///
+    /// @return A value of type T with bits [start, end] set and others cleared.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE T BitMaskRange(const uint32_t start, const uint32_t end) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return BitMaskRange64(start, end);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return BitMaskRange32(start, end);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return BitMaskRange16(start, end);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return BitMaskRange8(start, end);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for BitMaskRange");
+        }
+    }
+
     /// @brief Generates an inverse bitmask with all bits set except the one at the specified position for a 64-bit integer.
     ///
     /// @param pos The bit position to clear (0-63).
@@ -225,6 +320,102 @@ namespace bslt::bits
         else
         {
             static_assert(sizeof(T) == 0, "Unsupported type for InverseBitMask");
+        }
+    }
+
+    /// @brief Generates an inverse bitmask with bits cleared between the start and end positions (inclusive) for a 64-bit integer.
+    ///
+    /// @param start The starting bit position to clear (0-63).
+    /// @param end The ending bit position to clear (0-63).
+    ///
+    /// @return A 64-bit integer with bits [start, end] cleared and others set.
+    constexpr BASALT_FORCE_INLINE uint64_t InverseBitMaskRange64(const uint32_t start, const uint32_t end) noexcept
+    {
+        DCHECK_LE(start, 63) << "Start position must be less than 64";
+        DCHECK_LE(end, 63) << "End position must be less than 64";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+
+        // Calculate the positive mask and invert it
+        return ~((kAllBits64 << start) ^ ((kAllBits64 - 1) << end));
+    }
+
+    /// @brief Generates an inverse bitmask with bits cleared between the start and end positions (inclusive) for a 32-bit integer.
+    ///
+    /// @param start The starting bit position to clear (0-31).
+    /// @param end The ending bit position to clear (0-31).
+    ///
+    /// @return A 32-bit integer with bits [start, end] cleared and others set.
+    constexpr BASALT_FORCE_INLINE uint32_t InverseBitMaskRange32(const uint32_t start, const uint32_t end) noexcept
+    {
+        DCHECK_LE(start, 31) << "Start position must be less than 32";
+        DCHECK_LE(end, 31) << "End position must be less than 32";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+
+        return ~((kAllBits32 << start) ^ ((kAllBits32 - 1) << end));
+    }
+
+    /// @brief Generates an inverse bitmask with bits cleared between the start and end positions (inclusive) for a 16-bit integer.
+    ///
+    /// @param start The starting bit position to clear (0-15).
+    /// @param end The ending bit position to clear (0-15).
+    ///
+    /// @return A 16-bit integer with bits [start, end] cleared and others set.
+    constexpr BASALT_FORCE_INLINE uint16_t InverseBitMaskRange16(const uint32_t start, const uint32_t end) noexcept
+    {
+        DCHECK_LE(start, 15) << "Start position must be less than 16";
+        DCHECK_LE(end, 15) << "End position must be less than 16";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+
+        return static_cast<uint16_t>(~((kAllBits16 << start) ^ ((kAllBits16 - 1) << end)));
+    }
+
+    /// @brief Generates an inverse bitmask with bits cleared between the start and end positions (inclusive) for an 8-bit integer.
+    ///
+    /// @param start The starting bit position to clear (0-7).
+    /// @param end The ending bit position to clear (0-7).
+    ///
+    /// @return An 8-bit integer with bits [start, end] cleared and others set.
+    constexpr BASALT_FORCE_INLINE uint8_t InverseBitMaskRange8(const uint32_t start, const uint32_t end) noexcept
+    {
+        DCHECK_LE(start, 7) << "Start position must be less than 8";
+        DCHECK_LE(end, 7) << "End position must be less than 8";
+        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+
+        return static_cast<uint8_t>(~((kAllBits8 << start) ^ ((kAllBits8 - 1) << end)));
+    }
+
+    /// @brief Generic template to generate an inverse bitmask range for any unsigned integer type.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param start The starting bit position to clear.
+    /// @param end The ending bit position to clear.
+    ///
+    /// @return A value of type T with bits [start, end] cleared and others set.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE T InverseBitMaskRange(const uint32_t start, const uint32_t end) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return InverseBitMaskRange64(start, end);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return InverseBitMaskRange32(start, end);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return InverseBitMaskRange16(start, end);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return InverseBitMaskRange8(start, end);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for InverseBitMaskRange");
         }
     }
 
@@ -440,7 +631,7 @@ namespace bslt::bits
         return static_cast<uint64_t>(std::countr_zero(value));
 #else
         return LeastSignificantBitPosition64DeBruijn(value);
-#endif
+#endif // BASALT_USE_STD_BIT
     }
 
     /// @brief Returns the index of the least significant bit set in a 32-bit integer.
@@ -458,7 +649,7 @@ namespace bslt::bits
         return static_cast<uint32_t>(std::countr_zero(value));
 #else
         return static_cast<uint32_t>(LeastSignificantBitPosition64(static_cast<uint64_t>(value)));
-#endif // defined(__GNUC__) || defined(__llvm__)
+#endif // BASALT_USE_STD_BIT
     }
 
     /// @brief Returns the index of the least significant bit set in a 16-bit integer.
@@ -533,21 +724,20 @@ namespace bslt::bits
     /// @param n The value to check.
     ///
     /// @return A value with only the most significant bit of n set.
-    constexpr BASALT_FORCE_INLINE uint64_t MostSignificantBitWord64(const uint64_t n) noexcept
+    constexpr BASALT_FORCE_INLINE uint64_t MostSignificantBitWord64(uint64_t n) noexcept
     {
         DCHECK_NE(n, 0ULL) << "MSB word is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
 #else
-        uint64_t x = n;
-        x |= x >> 1;
-        x |= x >> 2;
-        x |= x >> 4;
-        x |= x >> 8;
-        x |= x >> 16;
-        x |= x >> 32;
-        return x - (x >> 1);
+        n |= n >> 1;
+        n |= n >> 2;
+        n |= n >> 4;
+        n |= n >> 8;
+        n |= n >> 16;
+        n |= n >> 32;
+        return n - (n >> 1);
 #endif
     }
 
@@ -556,20 +746,19 @@ namespace bslt::bits
     /// @param n The value to check.
     ///
     /// @return A value with only the most significant bit of n set.
-    constexpr BASALT_FORCE_INLINE uint32_t MostSignificantBitWord32(const uint32_t n) noexcept
+    constexpr BASALT_FORCE_INLINE uint32_t MostSignificantBitWord32(uint32_t n) noexcept
     {
         DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
 #else
-        uint32_t x = n;
-        x |= x >> 1;
-        x |= x >> 2;
-        x |= x >> 4;
-        x |= x >> 8;
-        x |= x >> 16;
-        return x - (x >> 1);
+        n |= n >> 1;
+        n |= n >> 2;
+        n |= n >> 4;
+        n |= n >> 8;
+        n |= n >> 16;
+        return n - (n >> 1);
 #endif
     }
 
@@ -578,20 +767,18 @@ namespace bslt::bits
     /// @param n The value to check.
     ///
     /// @return A value with only the most significant bit of n set.
-    constexpr BASALT_FORCE_INLINE uint16_t MostSignificantBitWord16(const uint16_t n) noexcept
+    constexpr BASALT_FORCE_INLINE uint16_t MostSignificantBitWord16(uint16_t n) noexcept
     {
         DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
 #else
-        // Casts are necessary to prevent integer promotion (int) during shifts.
-        uint16_t x = n;
-        x = static_cast<uint16_t>(x | (x >> 1));
-        x = static_cast<uint16_t>(x | (x >> 2));
-        x = static_cast<uint16_t>(x | (x >> 4));
-        x = static_cast<uint16_t>(x | (x >> 8));
-        return static_cast<uint16_t>(x - (x >> 1));
+        n = static_cast<uint16_t>(n | (n >> 1));
+        n = static_cast<uint16_t>(n | (n >> 2));
+        n = static_cast<uint16_t>(n | (n >> 4));
+        n = static_cast<uint16_t>(n | (n >> 8));
+        return static_cast<uint16_t>(n - (n >> 1));
 #endif
     }
 
@@ -600,18 +787,17 @@ namespace bslt::bits
     /// @param n The value to check.
     ///
     /// @return A value with only the most significant bit of n set.
-    constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitWord8(const uint8_t n) noexcept
+    constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitWord8(uint8_t n) noexcept
     {
         DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
 #else
-        uint8_t x = n;
-        x = static_cast<uint8_t>(x | (x >> 1));
-        x = static_cast<uint8_t>(x | (x >> 2));
-        x = static_cast<uint8_t>(x | (x >> 4));
-        return static_cast<uint8_t>(x - (x >> 1));
+        n = static_cast<uint8_t>(n | (n >> 1));
+        n = static_cast<uint8_t>(n | (n >> 2));
+        n = static_cast<uint8_t>(n | (n >> 4));
+        return static_cast<uint8_t>(n - (n >> 1));
 #endif
     }
 
@@ -749,25 +935,23 @@ namespace bslt::bits
 #if BASALT_USE_STD_BIT
         return static_cast<uint16_t>(std::bit_width(n) - 1);
 #else
-        uint16_t v = n; // Create mutable copy for shifting
         int b = 0;
-
-        if (0 != (v & (kAllBits16 << (1 << 3)))) // Check top 8 bits
+        if (0 != (n & (kAllBits16 << (1 << 3)))) // Check top 8 bits
         {
             b |= (1 << 3);
-            v >>= (1 << 3);
+            n >>= (1 << 3);
         }
-        if (0 != (v & (kAllBits16 << (1 << 2)))) // Check top 4 bits
+        if (0 != (n & (kAllBits16 << (1 << 2)))) // Check top 4 bits
         {
             b |= (1 << 2);
-            v >>= (1 << 2);
+            n >>= (1 << 2);
         }
-        if (0 != (v & (kAllBits16 << (1 << 1)))) // Check top 2 bits
+        if (0 != (n & (kAllBits16 << (1 << 1)))) // Check top 2 bits
         {
             b |= (1 << 1);
-            v >>= (1 << 1);
+            n >>= (1 << 1);
         }
-        if (0 != (v & (kAllBits16 << (1 << 0)))) // Check top 1 bit
+        if (0 != (n & (kAllBits16 << (1 << 0)))) // Check top 1 bit
         {
             b |= (1 << 0);
         }
@@ -780,27 +964,25 @@ namespace bslt::bits
     /// @param n The value to scan. Must not be 0.
     ///
     /// @return The 0-based index of the most significant bit (0-7).
-    constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitPosition8(const uint8_t n) noexcept
+    constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitPosition8(uint8_t n) noexcept
     {
         DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint8_t>(std::bit_width(n) - 1);
 #else
-        uint8_t v = n; // Create mutable copy for shifting
         int b = 0;
-
-        if (0 != (v & (kAllBits8 << (1 << 2)))) // Check top 4 bits
+        if (0 != (n & (kAllBits8 << (1 << 2)))) // Check top 4 bits
         {
             b |= (1 << 2);
-            v >>= (1 << 2);
+            n >>= (1 << 2);
         }
-        if (0 != (v & (kAllBits8 << (1 << 1)))) // Check top 2 bits
+        if (0 != (n & (kAllBits8 << (1 << 1)))) // Check top 2 bits
         {
             b |= (1 << 1);
-            v >>= (1 << 1);
+            n >>= (1 << 1);
         }
-        if (0 != (v & (kAllBits8 << (1 << 0)))) // Check top 1 bit
+        if (0 != (n & (kAllBits8 << (1 << 0)))) // Check top 1 bit
         {
             b |= (1 << 0);
         }
@@ -1063,6 +1245,166 @@ namespace bslt::bits
         else
         {
             static_assert(sizeof(T) == 0, "Unsupported type for BitLength");
+        }
+    }
+
+    /// @brief Creates a bitmask with bits set from position s to the most significant bit for a 64-bit integer.
+    ///
+    /// @param s The starting bit position (0-63).
+    ///
+    /// @return A bitmask with bits set from position s to the most significant bit.
+    constexpr BASALT_FORCE_INLINE uint64_t IntervalUp64(const uint64_t s)
+    {
+        DCHECK_LE(s, 63) << "Shift exceeds bit width";
+
+        return kAllBits64 << s;
+    }
+
+    /// @brief Creates a bitmask with bits set from position s to the most significant bit for a 32-bit integer.
+    ///
+    /// @param s The starting bit position (0-31).
+    ///
+    /// @return A bitmask with bits set from position s to the most significant bit.
+    constexpr BASALT_FORCE_INLINE uint32_t IntervalUp32(const uint32_t s)
+    {
+        DCHECK_LE(s, 31) << "Shift exceeds bit width";
+
+        return kAllBits32 << s;
+    }
+
+    /// @brief Creates a bitmask with bits set from position s to the most significant bit for a 16-bit integer.
+    ///
+    /// @param s The starting bit position (0-15).
+    ///
+    /// @return A bitmask with bits set from position s to the most significant bit.
+    constexpr BASALT_FORCE_INLINE uint16_t IntervalUp16(const uint16_t s)
+    {
+        DCHECK_LE(s, 15) << "Shift exceeds bit width";
+
+        return static_cast<uint16_t>(kAllBits16 << s);
+    }
+
+    /// @brief Creates a bitmask with bits set from position s to the most significant bit for an 8-bit integer.
+    ///
+    /// @param s The starting bit position (0-7).
+    ///
+    /// @return A bitmask with bits set from position s to the most significant bit.
+    constexpr BASALT_FORCE_INLINE uint8_t IntervalUp8(const uint8_t s)
+    {
+        DCHECK_LE(s, 7) << "Shift exceeds bit width";
+
+        return static_cast<uint8_t>(kAllBits8 << s);
+    }
+
+    /// @brief Generic template to create a bitmask with bits set from position s to the most significant bit.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param s The starting bit position.
+    ///
+    /// @return A bitmask of type T with bits set from position s to the most significant bit.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE T IntervalUp(const T s)
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return IntervalUp64(s);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return IntervalUp32(s);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return IntervalUp16(s);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return IntervalUp8(s);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for IntervalUp");
+        }
+    }
+
+    /// @brief Creates a bitmask with bits set from the least significant bit up to position s for a 64-bit integer.
+    ///
+    /// @param s The ending bit position (0-63).
+    ///
+    /// @return A bitmask with bits set from the least significant bit up to position s.
+    constexpr BASALT_FORCE_INLINE uint64_t IntervalDown64(const uint64_t s)
+    {
+        DCHECK_LE(s, 63) << "Shift exceeds bit width";
+        return kAllBits64 >> (63 - s);
+    }
+
+    /// @brief Creates a bitmask with bits set from the least significant bit up to position s for a 32-bit integer.
+    ///
+    /// @param s The ending bit position (0-31).
+    ///
+    /// @return A bitmask with bits set from the least significant bit up to position s.
+    constexpr BASALT_FORCE_INLINE uint32_t IntervalDown32(const uint32_t s)
+    {
+        DCHECK_LE(s, 31) << "Shift exceeds bit width";
+        return kAllBits32 >> (31 - s);
+    }
+
+    /// @brief Creates a bitmask with bits set from the least significant bit up to position s for a 16-bit integer.
+    ///
+    /// @param s The ending bit position (0-15).
+    ///
+    /// @return A bitmask with bits set from the least significant bit up to position s.
+    constexpr BASALT_FORCE_INLINE uint16_t IntervalDown16(const uint16_t s)
+    {
+        DCHECK_LE(s, 15) << "Shift exceeds bit width";
+        return static_cast<uint16_t>(kAllBits16 >> (15 - s));
+    }
+
+    /// @brief Creates a bitmask with bits set from the least significant bit up to position s for an 8-bit integer.
+    ///
+    /// @param s The ending bit position (0-7).
+    ///
+    /// @return A bitmask with bits set from the least significant bit up to position s.
+    constexpr BASALT_FORCE_INLINE uint8_t IntervalDown8(const uint8_t s)
+    {
+        DCHECK_LE(s, 7) << "Shift exceeds bit width";
+        return static_cast<uint8_t>(kAllBits8 >> (7 - s));
+    }
+
+    /// @brief Generic template to create a bitmask with bits set from the least significant bit up to position s.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param s The ending bit position.
+    ///
+    /// @return A bitmask of type T with bits set from the least significant bit up to position s.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE T IntervalDown(const T s)
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return IntervalDown64(s);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return IntervalDown32(s);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return IntervalDown16(s);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return IntervalDown8(s);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for IntervalDown");
         }
     }
 }
