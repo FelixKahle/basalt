@@ -1553,7 +1553,7 @@ namespace bslt::bits
         }
 
         // ReSharper disable once CppDFANullDereference
-        return (bitset[BitOffset32(pos)] & BitMask64(BitPosition32(pos)));
+        return (bitset[BitOffset32(pos)] & BitMask32(BitPosition32(pos)));
     }
 
     /// @brief Checks if a specific bit is set in an array of 16-bit integers.
@@ -1570,7 +1570,7 @@ namespace bslt::bits
         }
 
         // ReSharper disable once CppDFANullDereference
-        return (bitset[BitOffset16(pos)] & BitMask64(BitPosition16(pos)));
+        return (bitset[BitOffset16(pos)] & BitMask16(BitPosition16(pos)));
     }
 
     /// @brief Checks if a specific bit is set in an array of 8-bit integers.
@@ -1587,7 +1587,7 @@ namespace bslt::bits
         }
 
         // ReSharper disable once CppDFANullDereference
-        return (bitset[BitOffset8(pos)] & BitMask64(BitPosition8(pos)));
+        return (bitset[BitOffset8(pos)] & BitMask8(BitPosition8(pos)));
     }
 
     /// @brief Generic template to check if a bit is set in an array of any unsigned integer type.
