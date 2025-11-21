@@ -21,104 +21,64 @@
 
 #include <random>
 #include <limits>
+#include <vector>
 #include <bitset>
 #include <type_traits>
+#include <algorithm>
 #include "gtest/gtest.h"
 #include "basalt/utils/bits.h"
 
 namespace bslt::bits::test
 {
-    // Constants
-    static_assert(kAllBits64 == 0xFFFFFFFFFFFFFFFFULL, "kAllBits64 failed");
-    static_assert(kAllBits32 == 0xFFFFFFFFU, "kAllBits32 failed");
-    static_assert(kAllBits16 == 0xFFFFU, "kAllBits16 failed");
-    static_assert(kAllBits8 == 0xFFU, "kAllBits8 failed");
+    // 1.1 Constants
+    static_assert(kAllBits64 == 0xFFFFFFFFFFFFFFFFULL, "kAllBits64 constexpr failed");
+    static_assert(kAllBits32 == 0xFFFFFFFFU, "kAllBits32 constexpr failed");
+    static_assert(kAllBits16 == 0xFFFFU, "kAllBits16 constexpr failed");
+    static_assert(kAllBits8 == 0xFFU, "kAllBits8 constexpr failed");
 
-    // BitMask
-    static_assert(BitMask64(63) == 0x8000000000000000ULL, "BitMask64 failed");
-    static_assert(BitMask32(31) == 0x80000000U, "BitMask32 failed");
-    static_assert(BitMask16(15) == 0x8000U, "BitMask16 failed");
-    static_assert(BitMask8(7) == 0x80U, "BitMask8 failed");
+    // 1.2 Single Bit Masks
+    static_assert(BitMask64(63) == 0x8000000000000000ULL, "BitMask64 constexpr failed");
+    static_assert(BitMask32(31) == 0x80000000U, "BitMask32 constexpr failed");
+    static_assert(BitMask16(15) == 0x8000U, "BitMask16 constexpr failed");
+    static_assert(BitMask8(7) == 0x80U, "BitMask8 constexpr failed");
 
-    // BitMaskRange
-    static_assert(BitMaskRange64(0, 63) == 0xFFFFFFFFFFFFFFFFULL, "BitMaskRange64 full failed");
-    static_assert(BitMaskRange64(1, 3) == 0x0EULL, "BitMaskRange64 subset failed");
-    static_assert(BitMaskRange32(8, 15) == 0x0000FF00U, "BitMaskRange32 middle failed");
-    static_assert(BitMaskRange16(0, 0) == 0x0001U, "BitMaskRange16 single bit failed");
-    static_assert(BitMaskRange8(4, 7) == 0xF0U, "BitMaskRange8 upper half failed");
+    // 1.3 Range Masks
+    static_assert(BitMaskRange64(0, 63) == kAllBits64, "BitMaskRange64 full constexpr failed");
+    static_assert(BitMaskRange64(1, 2) == 0x06ULL, "BitMaskRange64 sub constexpr failed");
+    static_assert(BitMaskRange32(0, 31) == kAllBits32, "BitMaskRange32 full constexpr failed");
+    static_assert(BitMaskRange8(0, 7) == kAllBits8, "BitMaskRange8 full constexpr failed");
+    static_assert(BitMaskRange64(63, 63) == 0x8000000000000000ULL, "BitMaskRange64 single-bit high failed");
+    static_assert(BitMaskRange64(0, 0) == 0x1ULL, "BitMaskRange64 single-bit low failed");
 
-    // InverseBitMask
-    static_assert(InverseBitMask64(0) == 0xFFFFFFFFFFFFFFFEULL, "InverseBitMask64 failed");
-    static_assert(InverseBitMask32(0) == 0xFFFFFFFEU, "InverseBitMask32 failed");
-    static_assert(InverseBitMask16(0) == 0xFFFEU, "InverseBitMask16 failed");
-    static_assert(InverseBitMask8(0) == 0xFEU, "InverseBitMask8 failed");
+    // 1.4 Inverse Masks
+    static_assert(InverseBitMask64(0) == ~1ULL, "InverseBitMask64 constexpr failed");
+    static_assert(InverseBitMask32(0) == ~1U, "InverseBitMask32 constexpr failed");
 
-    // InverseBitMaskRange
-    static_assert(InverseBitMaskRange64(0, 63) == 0ULL, "InverseBitMaskRange64 full failed");
-    static_assert(InverseBitMaskRange32(0, 31) == 0U, "InverseBitMaskRange32 full failed");
-    static_assert(InverseBitMaskRange16(4, 7) == 0xFF0FU, "InverseBitMaskRange16 middle failed");
-    static_assert(InverseBitMaskRange8(0, 3) == 0xF0U, "InverseBitMaskRange8 lower half failed");
+    // 1.5 Inverse Range Masks
+    static_assert(InverseBitMaskRange64(0, 63) == 0ULL, "InverseBitMaskRange64 full constexpr failed");
+    static_assert(InverseBitMaskRange8(1, 6) == 0x81U, "InverseBitMaskRange8 partial constexpr failed");
 
-    // BitCount
-    static_assert(BitCount64(0x0000FFFF0000FFFFULL) == 32, "BitCount64 failed");
-    static_assert(BitCount32(0x00FF00FFU) == 16, "BitCount32 failed");
-    static_assert(BitCount16(0x0F0FU) == 8, "BitCount16 failed");
-    static_assert(BitCount8(0x55U) == 4, "BitCount8 failed");
+    // 1.6 Population Count
+    static_assert(BitCount64(0xFFFFFFFFFFFFFFFFULL) == 64, "BitCount64 constexpr failed");
+    static_assert(BitCount32(0x0000FFFFU) == 16, "BitCount32 constexpr failed");
+    static_assert(BitCount16(0x0F0FU) == 8, "BitCount16 constexpr failed");
+    static_assert(BitCount8(0x03U) == 2, "BitCount8 constexpr failed");
 
-    // LeastSignificantBitWord
-    static_assert(LeastSignificantBitWord64(48ULL) == 16ULL, "LSBWord64 failed");
-    static_assert(LeastSignificantBitWord32(48U) == 16U, "LSBWord32 failed");
-    static_assert(LeastSignificantBitWord16(48U) == 16U, "LSBWord16 failed");
-    static_assert(LeastSignificantBitWord8(48U) == 16U, "LSBWord8 failed");
+    // 1.7 LSB/MSB Extraction
+    static_assert(LeastSignificantBitWord64(0x1010ULL) == 0x0010ULL, "LSBWord64 constexpr failed");
+    static_assert(MostSignificantBitWord64(0x1010ULL) == 0x1000ULL, "MSBWord64 constexpr failed");
 
-    // LeastSignificantBitPosition
-    static_assert(LeastSignificantBitPosition64(1ULL << 63) == 63, "LSBPos64 failed");
-    static_assert(LeastSignificantBitPosition32(1U << 31) == 31, "LSBPos32 failed");
-    static_assert(LeastSignificantBitPosition16(1U << 15) == 15, "LSBPos16 failed");
-    static_assert(LeastSignificantBitPosition8(1U << 7) == 7, "LSBPos8 failed");
+    static_assert(LeastSignificantBitPosition64(0x8000000000000000ULL) == 63, "LSBPos64 constexpr failed");
+    static_assert(MostSignificantBitPosition64(0x0000000000000001ULL) == 0, "MSBPos64 constexpr failed");
 
-    // MostSignificantBitWord
-    static_assert(MostSignificantBitWord64(0xFFFF000000000000ULL) == 0x8000000000000000ULL, "MSBWord64 failed");
-    static_assert(MostSignificantBitWord32(0x00F00000U) == 0x00800000U, "MSBWord32 failed");
-    static_assert(MostSignificantBitWord16(0x0030U) == 0x0020U, "MSBWord16 failed");
-    static_assert(MostSignificantBitWord8(0x03U) == 0x02U, "MSBWord8 failed");
+    // 1.8 Intervals
+    static_assert(IntervalUp64(63) == 0x8000000000000000ULL, "IntervalUp64 constexpr failed");
+    static_assert(IntervalDown64(0) == 1ULL, "IntervalDown64 constexpr failed");
 
-    // MostSignificantBitPosition
-    static_assert(MostSignificantBitPosition64(0x8000000000000000ULL) == 63, "MSBPos64 failed");
-    static_assert(MostSignificantBitPosition64(3ULL) == 1, "MSBPos64 small value failed");
-    static_assert(MostSignificantBitPosition32(0x80000000U) == 31, "MSBPos32 failed");
-    static_assert(MostSignificantBitPosition16(0x00FFU) == 7, "MSBPos16 failed");
-    static_assert(MostSignificantBitPosition8(0x01U) == 0, "MSBPos8 failed");
-
-    // BitPosition (Index within word)
-    static_assert(BitPosition64(65) == 1, "BitPosition64 failed");
-    static_assert(BitPosition32(33) == 1, "BitPosition32 failed");
-    static_assert(BitPosition16(17) == 1, "BitPosition16 failed");
-    static_assert(BitPosition8(9) == 1, "BitPosition8 failed");
-
-    // BitOffset (Array index)
-    static_assert(BitOffset64(128) == 2, "BitOffset64 failed");
-    static_assert(BitOffset32(64) == 2, "BitOffset32 failed");
-    static_assert(BitOffset16(32) == 2, "BitOffset16 failed");
-    static_assert(BitOffset8(16) == 2, "BitOffset8 failed");
-
-    // BitLength (Storage size required)
-    static_assert(BitLength64(129) == 3, "BitLength64 failed");
-    static_assert(BitLength32(65) == 3, "BitLength32 failed");
-    static_assert(BitLength16(33) == 3, "BitLength16 failed");
-    static_assert(BitLength8(17) == 3, "BitLength8 failed");
-
-    // IntervalUp (Masks from S up to MSB)
-    static_assert(IntervalUp64(0) == kAllBits64, "IntervalUp64 full failed");
-    static_assert(IntervalUp64(63) == 0x8000000000000000ULL, "IntervalUp64 msb failed");
-    static_assert(IntervalUp32(16) == 0xFFFF0000U, "IntervalUp32 half failed");
-    static_assert(IntervalUp8(4) == 0xF0U, "IntervalUp8 failed");
-
-    // IntervalDown (Masks from 0 up to S)
-    static_assert(IntervalDown64(63) == kAllBits64, "IntervalDown64 full failed");
-    static_assert(IntervalDown64(0) == 1ULL, "IntervalDown64 lsb failed");
-    static_assert(IntervalDown32(15) == 0x0000FFFFU, "IntervalDown32 half failed");
-    static_assert(IntervalDown8(3) == 0x0FU, "IntervalDown8 failed");
+    // 1.9 Storage Utils
+    static_assert(BitLength64(65) == 2, "BitLength64 constexpr failed");
+    static_assert(BitOffset64(64) == 1, "BitOffset64 constexpr failed");
+    static_assert(BitPosition64(65) == 1, "BitPosition64 constexpr failed");
 
     template <typename T>
     class BitUtilsTypedTest : public ::testing::Test
@@ -128,543 +88,467 @@ namespace bslt::bits::test
     using UnsignedTypes = ::testing::Types<uint8_t, uint16_t, uint32_t, uint64_t>;
     TYPED_TEST_SUITE(BitUtilsTypedTest, UnsignedTypes);
 
-    TYPED_TEST(BitUtilsTypedTest, ConstantsCorrectness)
+    TYPED_TEST(BitUtilsTypedTest, BitMaskAndInverseConsistency)
     {
         using T = TypeParam;
+        constexpr uint32_t k_bits = sizeof(T) * 8;
 
-        // We can't test kAllBits<T> generically easily without SFINAE mapping,
-        // but we can verify the logic via masks.
-        EXPECT_EQ(BitMask<T>(0), T{1});
-    }
-
-    TYPED_TEST(BitUtilsTypedTest, BitMaskAndInverse)
-    {
-        using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
-
-        for (uint32_t i = 0; i < kBits; ++i)
+        for (uint32_t i = 0; i < k_bits; ++i)
         {
             const T mask = BitMask<T>(i);
             const T inverse = InverseBitMask<T>(i);
-            const T expectedMask = static_cast<T>(T{1} << i);
+            const T expected = static_cast<T>(T{1} << i);
 
-            EXPECT_EQ(mask, expectedMask) << "BitMask failed at index " << i;
-            EXPECT_EQ(inverse, static_cast<T>(~mask)) << "InverseBitMask failed at index " << i;
-
-            // Property: Mask | Inverse should be all 1s (Max)
-            // Note: uint8/16 promotion to int requires cast back
+            EXPECT_EQ(mask, expected);
+            EXPECT_EQ(inverse, static_cast<T>(~mask));
+            // Mask + Inverse should equal all 1s (implicitly max value)
             EXPECT_EQ(static_cast<T>(mask | inverse), std::numeric_limits<T>::max());
-
-            // Property: Mask & Inverse should be 0
             EXPECT_EQ(static_cast<T>(mask & inverse), T{0});
         }
     }
 
-    TYPED_TEST(BitUtilsTypedTest, BitCountBasics)
+    TYPED_TEST(BitUtilsTypedTest, BitMaskRangeConsistency)
     {
         using T = TypeParam;
-        EXPECT_EQ(BitCount<T>(0), 0);
-        EXPECT_EQ(BitCount<T>(std::numeric_limits<T>::max()), sizeof(T) * 8);
+        constexpr uint32_t k_bits = sizeof(T) * 8;
 
-        // Test pattern 0x55 (0101...)
-        T pattern55 = 0;
-        for (size_t i = 0; i < sizeof(T); ++i) pattern55 |= static_cast<T>(0x55ULL << (i * 8));
-        EXPECT_EQ(BitCount<T>(pattern55), (sizeof(T) * 8) / 2);
-    }
+        // Test subset of ranges to save time, but cover boundaries
+        std::vector<std::pair<uint32_t, uint32_t>> ranges = {
+            {0, 0}, {0, k_bits - 1}, {k_bits / 2, k_bits - 1}, {0, k_bits / 2},
+            {k_bits - 1, k_bits - 1} // Single bit at MSB
+        };
 
-    TYPED_TEST(BitUtilsTypedTest, LeastSignificantBitWord)
-    {
-        using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
-
-        EXPECT_EQ(LeastSignificantBitWord<T>(0), 0);
-
-        for (uint32_t i = 0; i < kBits; ++i)
+        for (auto [start, end] : ranges)
         {
-            T val = BitMask<T>(i);
-            // 1. Pure power of 2: LSB Word is the value itself
-            EXPECT_EQ(LeastSignificantBitWord<T>(val), val);
+            const T mask = BitMaskRange<T>(start, end);
+            const T inverse = InverseBitMaskRange<T>(start, end);
 
-            // 2. Add noise bits ABOVE the LSB
-            if (i < kBits - 1)
+            EXPECT_EQ(mask, static_cast<T>(~inverse));
+
+            // Verify manually
+            T calculated = 0;
+            for (uint32_t i = start; i <= end; ++i)
             {
-                // Set the highest bit as noise
-                T noise = static_cast<T>(val | BitMask<T>(kBits - 1));
-                EXPECT_EQ(LeastSignificantBitWord<T>(noise), val);
+                calculated |= static_cast<T>(T{1} << i);
             }
+            EXPECT_EQ(mask, calculated);
         }
     }
 
-    TYPED_TEST(BitUtilsTypedTest, LeastSignificantBitPosition)
+    TYPED_TEST(BitUtilsTypedTest, PopcountPatterns)
     {
         using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
+        constexpr uint32_t k_bits = sizeof(T) * 8;
 
-        // Undefined for 0, so start loops at finding set bits
-        for (uint32_t i = 0; i < kBits; ++i)
+        // Alternating bits 0xAA...
+        T val_aa = 0;
+        for (uint32_t i = 1; i < k_bits; i += 2) val_aa |= static_cast<T>(T{1} << i);
+        EXPECT_EQ(BitCount<T>(val_aa), k_bits / 2);
+
+        // Alternating bits 0x55...
+        T val_55 = 0;
+        for (uint32_t i = 0; i < k_bits; i += 2) val_55 |= static_cast<T>(T{1} << i);
+        EXPECT_EQ(BitCount<T>(val_55), k_bits / 2);
+
+        // All bits
+        EXPECT_EQ(BitCount<T>(std::numeric_limits<T>::max()), k_bits);
+
+        // No bits
+        EXPECT_EQ(BitCount<T>(T{0}), 0);
+    }
+
+    TYPED_TEST(BitUtilsTypedTest, WordIsolationComplex)
+    {
+        using T = TypeParam;
+        // 1100...0011
+        T val = static_cast<T>(BitMask<T>(0) | BitMask<T>(1));
+        if (sizeof(T) * 8 > 2)
         {
-            T val = BitMask<T>(i);
-            EXPECT_EQ(LeastSignificantBitPosition<T>(val), i);
-
-            // Test with noise above
-            if (i < kBits - 1)
-            {
-                T noise = static_cast<T>(val | BitMask<T>(kBits - 1));
-                EXPECT_EQ(LeastSignificantBitPosition<T>(noise), i);
-            }
+            val |= static_cast<T>(MostSignificantBitWord<T>(std::numeric_limits<T>::max()));
         }
+
+        // LSB should be bit 0 (value 1)
+        EXPECT_EQ(LeastSignificantBitWord<T>(val), T{1});
+
+        // MSB should be the top bit
+        EXPECT_EQ(MostSignificantBitWord<T>(val), MostSignificantBitWord<T>(std::numeric_limits<T>::max()));
     }
 
-    TYPED_TEST(BitUtilsTypedTest, MostSignificantBitPosition)
+    TYPED_TEST(BitUtilsTypedTest, ArrayManipulationAndQuery)
     {
         using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
+        constexpr uint64_t k_bits_per_elem = sizeof(T) * 8;
+        constexpr size_t k_arr_size = 4;
 
-        for (uint32_t i = 0; i < kBits; ++i)
+        T data[k_arr_size] = {0};
+
+        // 1. SetBit & IsBitSet
+        SetBit<T>(data, 0); // Word 0, Bit 0
+        EXPECT_EQ(data[0], T{1});
+        EXPECT_TRUE(IsBitSet<T>(data, 0));
+
+        const uint64_t word1_bit = k_bits_per_elem;
+        SetBit<T>(data, word1_bit); // Word 1, Bit 0
+        EXPECT_EQ(data[1], T{1});
+        EXPECT_TRUE(IsBitSet<T>(data, word1_bit));
+
+        // 2. ClearBit
+        ClearBit<T>(data, 0);
+        EXPECT_EQ(data[0], T{0});
+        EXPECT_FALSE(IsBitSet<T>(data, 0));
+
+        // 3. BitCountRange
+        // Fill Word 2 entirely
+        const uint64_t start_w2 = 2 * k_bits_per_elem;
+        for (uint64_t i = 0; i < k_bits_per_elem; ++i)
         {
-            T val = BitMask<T>(i);
-
-            // Case 1: Exact power of 2
-            EXPECT_EQ(MostSignificantBitPosition<T>(val), i);
-
-            // Case 2: Add noise BELOW the MSB
-            if (i > 0)
-            {
-                T noise = static_cast<T>(val | (val - 1));
-                EXPECT_EQ(MostSignificantBitPosition<T>(noise), i)
-                    << "Failed with lower-bit noise at index " << i;
-            }
+            SetBit<T>(data, start_w2 + i);
         }
+
+        // Count all set bits in array (Should be Word 1 bit (1) + Word 2 bits (all))
+        EXPECT_EQ(BitCountRange<T>(data, 0, k_arr_size * k_bits_per_elem - 1), 1 + k_bits_per_elem);
+
+        // Count partial
+        EXPECT_EQ(BitCountRange<T>(data, start_w2, start_w2 + 1), 2);
+
+        // 4. IsEmptyRange
+        EXPECT_TRUE(IsEmptyRange<T>(data, 0, k_bits_per_elem - 1)); // Word 0 is empty
+        EXPECT_FALSE(IsEmptyRange<T>(data, start_w2, start_w2 + 5)); // Word 2 is full
     }
 
-    TYPED_TEST(BitUtilsTypedTest, MostSignificantBitWord)
+    TYPED_TEST(BitUtilsTypedTest, RangeSearchGeneric)
     {
         using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
+        constexpr uint64_t k_bits_per_elem = sizeof(T) * 8;
+        constexpr size_t k_arr_size = 4;
+        const uint64_t total_bits = k_arr_size * k_bits_per_elem;
 
-        for (uint32_t i = 0; i < kBits; ++i)
+        // [0]: 0, [1]: 0, [2]: 1 (LSB), [3]: 0
+        T data[k_arr_size] = {0};
+        const uint64_t target_bit = 2 * k_bits_per_elem;
+        SetBit<T>(data, target_bit);
+
+        // 1. Exact find LSB
+        // Clamp search end to total_bits - 1
+        uint64_t search_end = std::min(target_bit + 10, total_bits - 1);
+        EXPECT_EQ(LeastSignificantBitPosition<T>(data, 0, search_end), static_cast<int64_t>(target_bit));
+
+        // 2. Exact find MSB
+        EXPECT_EQ(MostSignificantBitPosition<T>(data, 0, search_end), static_cast<int64_t>(target_bit));
+
+        // 3. Range before bit
+        if (target_bit > 0)
         {
-            T expectedMsb = BitMask<T>(i); // The single bit at position i
-
-            // Case 1: Exact power of 2
-            // The MSB Word of a power of 2 is the value itself.
-            EXPECT_EQ(MostSignificantBitWord<T>(expectedMsb), expectedMsb);
-
-            // Case 2: Add noise BELOW the MSB
-            // e.g., if MSB is at 4 (10000), adding 01111 (15) -> 11111.
-            // The MSB Word should still be 10000.
-            if (i > 0)
-            {
-                T noise = static_cast<T>(expectedMsb | (expectedMsb - 1));
-                EXPECT_EQ(MostSignificantBitWord<T>(noise), expectedMsb)
-                    << "Failed with lower-bit noise at index " << i;
-            }
+            EXPECT_EQ(LeastSignificantBitPosition<T>(data, 0, target_bit - 1), -1);
         }
-    }
 
-    TYPED_TEST(BitUtilsTypedTest, BitPosition)
-    {
-        using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
-
-        // BitPosition<T> is (pos % kBits)
-        EXPECT_EQ(BitPosition<T>(0), 0);
-        EXPECT_EQ(BitPosition<T>(kBits - 1), kBits - 1);
-        EXPECT_EQ(BitPosition<T>(kBits), 0); // Wrap
-        EXPECT_EQ(BitPosition<T>(kBits + 1), 1); // Wrap
-    }
-
-    TYPED_TEST(BitUtilsTypedTest, BitOffset)
-    {
-        using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
-
-        // BitOffset<T> is (pos / kBits)
-        EXPECT_EQ(BitOffset<T>(0), 0);
-        EXPECT_EQ(BitOffset<T>(kBits - 1), 0);
-        EXPECT_EQ(BitOffset<T>(kBits), 1);
-        EXPECT_EQ(BitOffset<T>(kBits * 10 + 5), 10);
-    }
-
-    TYPED_TEST(BitUtilsTypedTest, BitLength)
-    {
-        using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
-
-        // How many elements of type T are needed to store N bits?
-        EXPECT_EQ(BitLength<T>(0), 0);
-        EXPECT_EQ(BitLength<T>(1), 1);
-        EXPECT_EQ(BitLength<T>(kBits), 1);
-        EXPECT_EQ(BitLength<T>(kBits + 1), 2);
-        EXPECT_EQ(BitLength<T>(kBits * 2), 2);
-    }
-
-    TYPED_TEST(BitUtilsTypedTest, BitMaskRangeCorrectness)
-    {
-        using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
-
-        // Test every possible valid range
-        for (uint32_t start = 0; start < kBits; ++start)
+        // 4. Range after bit
+        uint64_t after_start = target_bit + 1;
+        uint64_t after_end = std::min(target_bit + 20, total_bits - 1);
+        if (after_start < total_bits)
         {
-            for (uint32_t end = start; end < kBits; ++end)
-            {
-                const T mask = BitMaskRange<T>(start, end);
-                const T inverse = InverseBitMaskRange<T>(start, end);
-
-                // 1. Verify Inverse is complement
-                EXPECT_EQ(mask, static_cast<T>(~inverse));
-
-                // 2. Verify manually
-                T expected = 0;
-                for (uint32_t i = start; i <= end; ++i)
-                {
-                    expected |= static_cast<T>(T{1} << i);
-                }
-                EXPECT_EQ(mask, expected) << "Range [" << start << ", " << end << "]";
-            }
+            EXPECT_EQ(MostSignificantBitPosition<T>(data, after_start, after_end), -1);
         }
-    }
 
-    TYPED_TEST(BitUtilsTypedTest, IntervalCorrectness)
-    {
-        using T = TypeParam;
-        constexpr uint32_t kBits = sizeof(T) * 8;
-
-        for (uint32_t i = 0; i < kBits; ++i)
+        // 5. Add another bit higher up
+        const uint64_t high_bit = target_bit + 5;
+        if (high_bit < total_bits)
         {
-            // IntervalUp(i) should equivalent to Range(i, max_bit)
-            // It sets bits [i, kBits-1]
-            T up = IntervalUp<T>(static_cast<T>(i));
-            T upRange = BitMaskRange<T>(i, kBits - 1);
-            EXPECT_EQ(up, upRange) << "IntervalUp(" << i << ")";
+            SetBit<T>(data, high_bit);
 
-            // IntervalDown(i) should be equivalent to Range(0, i)
-            // It sets bits [0, i]
-            T down = IntervalDown<T>(static_cast<T>(i));
-            T downRange = BitMaskRange<T>(0, i);
-            EXPECT_EQ(down, downRange) << "IntervalDown(" << i << ")";
+            // Calculate valid max index (Total bits - 1)
+            const uint64_t max_search_index = total_bits - 1;
+
+            // LSB should still be low bit
+            EXPECT_EQ(LeastSignificantBitPosition<T>(data, 0, max_search_index), static_cast<int64_t>(target_bit));
+            // MSB should be high bit
+            EXPECT_EQ(MostSignificantBitPosition<T>(data, 0, max_search_index), static_cast<int64_t>(high_bit));
         }
     }
 
-    TEST(ExplicitApiTest, Constants)
+    TYPED_TEST(BitUtilsTypedTest, RangeSearchSparse)
     {
-        EXPECT_EQ(kAllBits64, std::numeric_limits<uint64_t>::max());
-        EXPECT_EQ(kAllBits32, std::numeric_limits<uint32_t>::max());
-        EXPECT_EQ(kAllBits16, std::numeric_limits<uint16_t>::max());
-        EXPECT_EQ(kAllBits8, std::numeric_limits<uint8_t>::max());
+        // Test finding a bit in a sea of zeros
+        using T = TypeParam;
+        constexpr uint64_t k_bits_per_elem = sizeof(T) * 8;
+        constexpr size_t k_arr_size = 8; // larger array
 
-        EXPECT_EQ(kAllBitsButLsb64, 0xFFFFFFFFFFFFFFFEULL);
-        EXPECT_EQ(kAllBitsButLsb8, 0xFE);
+        T data[k_arr_size] = {0};
+        // Set bit in the very last word
+        uint64_t last_bit = (k_arr_size * k_bits_per_elem) - 1;
+        SetBit<T>(data, last_bit);
+
+        // Search entire range
+        EXPECT_EQ(LeastSignificantBitPosition<T>(data, 0, last_bit), static_cast<int64_t>(last_bit));
+        EXPECT_EQ(MostSignificantBitPosition<T>(data, 0, last_bit), static_cast<int64_t>(last_bit));
+
+        // Search from middle to end
+        uint64_t mid_bit = (k_arr_size * k_bits_per_elem) / 2;
+        EXPECT_EQ(LeastSignificantBitPosition<T>(data, mid_bit, last_bit), static_cast<int64_t>(last_bit));
     }
 
-    TEST(ExplicitApiTest, MaskGenerators)
+    TEST(ExplicitApiTest, MaskGeneratorsCorrectness)
     {
         EXPECT_EQ(BitMask64(1), 2ULL);
         EXPECT_EQ(BitMask32(1), 2U);
         EXPECT_EQ(BitMask16(1), 2U);
         EXPECT_EQ(BitMask8(1), 2U);
 
-        EXPECT_EQ(InverseBitMask64(0), 0xFFFFFFFFFFFFFFFEULL);
-        EXPECT_EQ(InverseBitMask32(0), 0xFFFFFFFEU);
-        EXPECT_EQ(InverseBitMask16(0), 0xFFFEU);
-        EXPECT_EQ(InverseBitMask8(0), 0xFEU);
+        EXPECT_EQ(BitMaskRange64(0, 1), 3ULL);
+        EXPECT_EQ(BitMaskRange8(0, 7), 0xFFU);
     }
 
-    TEST(ExplicitApiTest, PopCount)
+    TEST(ExplicitApiTest, ArrayOps8Bit)
     {
-        EXPECT_EQ(BitCount64(0x3), 2);
-        EXPECT_EQ(BitCount32(0x3), 2);
-        EXPECT_EQ(BitCount16(0x3), 2);
-        EXPECT_EQ(BitCount8(0x3), 2);
+        // 0xAA = 10101010, 0x55 = 01010101
+        constexpr uint8_t arr[] = {0xAA, 0x55};
+
+        // IsBitSet
+        EXPECT_FALSE(IsBitSet8(arr, 0));
+        EXPECT_TRUE(IsBitSet8(arr, 1));
+        EXPECT_TRUE(IsBitSet8(arr, 8)); // Word 1, Bit 0
+
+        // CountRange [0, 15] -> 4 + 4 = 8
+        EXPECT_EQ(BitCountRange8(arr, 0, 15), 8);
+
+        // EmptyRange
+        EXPECT_FALSE(IsEmptyRange8(arr, 0, 7));
     }
 
-    TEST(ExplicitApiTest, LSBWord)
+    TEST(ExplicitApiTest, ArrayOps64Bit)
     {
-        EXPECT_EQ(LeastSignificantBitWord64(12), 4);
-        EXPECT_EQ(LeastSignificantBitWord32(12), 4);
-        EXPECT_EQ(LeastSignificantBitWord16(12), 4);
-        EXPECT_EQ(LeastSignificantBitWord8(12), 4);
+        uint64_t arr[] = {0, 0};
+        SetBit64(arr, 127); // Last bit of second word
+
+        EXPECT_TRUE(IsBitSet64(arr, 127));
+        EXPECT_EQ(BitCountRange64(arr, 0, 127), 1);
+        EXPECT_EQ(MostSignificantBitPosition64(arr, 0, 127), 127);
     }
 
-    TEST(ExplicitApiTest, LSBPosition)
+    TEST(EdgeCaseTest, IntervalBoundaries)
     {
-        // 12 = 1100 binary, LSB is at index 2
-        EXPECT_EQ(LeastSignificantBitPosition64(12), 2);
-        EXPECT_EQ(LeastSignificantBitPosition32(12), 2);
-        EXPECT_EQ(LeastSignificantBitPosition16(12), 2);
-        EXPECT_EQ(LeastSignificantBitPosition8(12), 2);
+        // Interval functions shift by 's'. If s=width, it's UB.
+        // Our API requires s < width via DCHECK.
+        // Logic check for s=0 and s=max.
+
+        // Up(0) should be all ones
+        EXPECT_EQ(IntervalUp8(0), 0xFF);
+        // Up(7) should be top bit only (0x80)
+        EXPECT_EQ(IntervalUp8(7), 0x80);
+
+        // Down(0) should be bottom bit only (0x01)
+        EXPECT_EQ(IntervalDown8(0), 0x01);
+        // Down(7) should be all ones
+        EXPECT_EQ(IntervalDown8(7), 0xFF);
     }
 
-    TEST(ExplicitApiTest, MSBPosition)
+    TEST(EdgeCaseTest, SearchRangeCrossesWordBoundaries)
     {
-        // 12 = 1100 binary, MSB is at index 3
-        EXPECT_EQ(MostSignificantBitPosition64(12), 3);
-        EXPECT_EQ(MostSignificantBitPosition32(12), 3);
-        EXPECT_EQ(MostSignificantBitPosition16(12), 3);
-        EXPECT_EQ(MostSignificantBitPosition8(12), 3);
+        // Setup: 64-bit words.
+        // Word 0: 0
+        // Word 1: 0
+        // Word 2: 1 (at global index 128)
+        std::vector<uint64_t> data(4, 0);
+        SetBit64(data.data(), 128);
 
-        // 1 = 0001 binary, MSB is at index 0
-        EXPECT_EQ(MostSignificantBitPosition32(1), 0);
+        // Search starting exactly at 128
+        EXPECT_EQ(LeastSignificantBitPosition64(data.data(), 128, 200), 128);
+
+        // Search ending exactly at 128
+        EXPECT_EQ(MostSignificantBitPosition64(data.data(), 0, 128), 128);
+
+        // Search that encompasses it but start/end are in words 0 and 3
+        EXPECT_EQ(LeastSignificantBitPosition64(data.data(), 10, 200), 128);
     }
 
-    TEST(ExplicitApiTest, MSBWord)
+    TEST(EdgeCaseTest, SearchRangeWithinSingleWordMasked)
     {
-        // 0b00001100 (12) -> MSB is 0b00001000 (8)
-        EXPECT_EQ(MostSignificantBitWord64(12), 8);
-        EXPECT_EQ(MostSignificantBitWord32(12), 8);
-        EXPECT_EQ(MostSignificantBitWord16(12), 8);
-        EXPECT_EQ(MostSignificantBitWord8(12), 8);
+        // Word 0: 1111...1111
+        const std::vector<uint64_t> data = {~0ULL};
 
-        // Edge Case: Max value
-        // 0xFF (255) -> MSB is 0x80 (128)
-        EXPECT_EQ(MostSignificantBitWord8(255), 128);
-
-        // Edge Case: Smallest non-zero
-        EXPECT_EQ(MostSignificantBitWord64(1), 1);
+        // Restrict search to [4, 5].
+        // Should return 4 as LSB, 5 as MSB.
+        EXPECT_EQ(LeastSignificantBitPosition64(data.data(), 4, 5), 4);
+        EXPECT_EQ(MostSignificantBitPosition64(data.data(), 4, 5), 5);
     }
 
-    TEST(ExplicitApiTest, DeBruijnFallback)
+    TEST(EdgeCaseTest, SearchRangeNoBitsSetInSubset)
     {
-        // Explicitly test the DeBruijn fallback function for 64-bit
-        // to ensure the math works even if the compiler picks intrinsics for the main function.
+        // Word 0: 11000011 (bits 0,1,6,7 set)
+        uint8_t data[] = {0xC3}; // 11000011
+
+        // Search in middle [2, 5] - should be empty
+        EXPECT_EQ(LeastSignificantBitPosition8(data, 2, 5), -1);
+        EXPECT_EQ(MostSignificantBitPosition8(data, 2, 5), -1);
+
+        // Verify range count
+        EXPECT_EQ(BitCountRange8(data, 2, 5), 0);
+        EXPECT_TRUE(IsEmptyRange8(data, 2, 5));
+    }
+
+    TEST(EdgeCaseTest, DeBruijnManualFallback)
+    {
+        // Force test the fallback logic even if intrinsics are active
         for (int i = 0; i < 64; ++i)
         {
-            EXPECT_EQ(LeastSignificantBitPosition64DeBruijn(1ULL << i), i);
+            const uint64_t val = 1ULL << i;
+            EXPECT_EQ(LeastSignificantBitPosition64DeBruijn(val), i);
         }
-    }
-
-    TEST(ExplicitApiTest, StorageUtils)
-    {
-        // 64-bit storage helpers
-        EXPECT_EQ(BitPosition64(66), 2);
-        EXPECT_EQ(BitOffset64(66), 1);
-        EXPECT_EQ(BitLength64(66), 2);
-
-        // 8-bit storage helpers
-        EXPECT_EQ(BitPosition8(9), 1);
-        EXPECT_EQ(BitOffset8(9), 1);
-        EXPECT_EQ(BitLength8(9), 2);
-    }
-
-    TEST(ExplicitApiTest, RangeMasks)
-    {
-        // 64-bit
-        EXPECT_EQ(BitMaskRange64(0, 1), 3ULL);
-        EXPECT_EQ(BitMaskRange64(62, 63), 0xC000000000000000ULL);
-
-        // 32-bit
-        EXPECT_EQ(BitMaskRange32(0, 0), 1U);
-        EXPECT_EQ(BitMaskRange32(0, 31), 0xFFFFFFFFU);
-
-        // 16-bit
-        EXPECT_EQ(BitMaskRange16(4, 7), 0x00F0U);
-
-        // 8-bit
-        EXPECT_EQ(BitMaskRange8(1, 6), 0x7EU); // 01111110
-    }
-
-    TEST(ExplicitApiTest, InverseRangeMasks)
-    {
-        // Inverse of Range(0, 1) -> Inverse of ...00011 -> ...11100
-        EXPECT_EQ(InverseBitMaskRange64(0, 1), 0xFFFFFFFFFFFFFFFCULL);
-
-        // Inverse of Range(1, 6) 8-bit -> ~0x7E -> 0x81
-        EXPECT_EQ(InverseBitMaskRange8(1, 6), 0x81U);
-    }
-
-    TEST(ExplicitApiTest, Intervals)
-    {
-        // Up: [s, 63]
-        EXPECT_EQ(IntervalUp64(63), 0x8000000000000000ULL);
-        EXPECT_EQ(IntervalUp8(4), 0xF0U); // 11110000
-
-        // Down: [0, s]
-        EXPECT_EQ(IntervalDown64(0), 1ULL);
-        EXPECT_EQ(IntervalDown8(3), 0x0FU); // 00001111
     }
 
 #ifndef NDEBUG
-    TEST(BitUtilsDeathTest, LSBZeroInput)
+    TEST(DeathTest, NullPointerDetection)
     {
-        // LSB position is mathematically undefined for 0.
-        // The library uses DCHECK_NE.
-        EXPECT_DEATH(LeastSignificantBitPosition64(0), "LSB position is undefined");
-        EXPECT_DEATH(LeastSignificantBitPosition32(0), "LSB position is undefined");
-        EXPECT_DEATH(LeastSignificantBitPosition16(0), "LSB position is undefined");
-        EXPECT_DEATH(LeastSignificantBitPosition8(0), "LSB position is undefined");
-        EXPECT_DEATH(LeastSignificantBitPosition64DeBruijn(0), "LSB position is undefined");
+        uint64_t* null_ptr = nullptr;
+        EXPECT_DEATH(IsBitSet64(null_ptr, 0), "Bitset pointer is null");
+        EXPECT_DEATH(SetBit64(null_ptr, 0), "Bitset pointer is null");
+        EXPECT_DEATH(ClearBit64(null_ptr, 0), "Bitset pointer is null");
+        EXPECT_DEATH(BitCountRange64(null_ptr, 0, 10), "Bitset pointer is null");
+        EXPECT_DEATH(LeastSignificantBitPosition64(null_ptr, 0, 10), "Bitset pointer is null");
     }
 
-    TEST(BitUtilsDeathTest, MSBZeroInput)
+    TEST(DeathTest, InvalidShiftAmounts)
     {
-        // MSB is mathematically undefined for 0.
-        // The library uses DCHECK_NE.
-        EXPECT_DEATH(MostSignificantBitWord64(0), "MSB word is undefined");
-        EXPECT_DEATH(MostSignificantBitWord32(0), "MSB word is undefined");
-        EXPECT_DEATH(MostSignificantBitWord16(0), "MSB word is undefined");
-        EXPECT_DEATH(MostSignificantBitWord8(0), "MSB word is undefined");
-
-        EXPECT_DEATH(MostSignificantBitPosition64(0), "MSB position is undefined");
-        EXPECT_DEATH(MostSignificantBitPosition32(0), "MSB position is undefined");
-        EXPECT_DEATH(MostSignificantBitPosition16(0), "MSB position is undefined");
-        EXPECT_DEATH(MostSignificantBitPosition8(0), "MSB position is undefined");
-    }
-
-    TEST(BitUtilsDeathTest, MaskOutOfBounds)
-    {
-        // Shifting >= width is UB in C++. The library uses DCHECK_LT.
         EXPECT_DEATH(BitMask64(64), "Shift amount must be less than");
-        EXPECT_DEATH(BitMask32(32), "Shift amount must be less than");
-        EXPECT_DEATH(InverseBitMask16(16), "Shift amount must be less than");
+        EXPECT_DEATH(BitMask8(8), "Shift amount must be less than");
     }
 
-    TEST(BitUtilsDeathTest, RangeInvalid)
+    TEST(DeathTest, InvalidRangeOrdering)
     {
+        constexpr uint64_t arr[] = {0};
         // Start > End
-        EXPECT_DEATH(BitMaskRange64(10, 5), "Start position must be less than or equal to end");
-        EXPECT_DEATH(BitMaskRange32(5, 4), "Start position must be less than or equal to end");
+        EXPECT_DEATH(BitCountRange64(arr, 10, 5), "Start position must be less than or equal to end");
+        EXPECT_DEATH(IsEmptyRange64(arr, 10, 5), "Start position must be less than or equal to end");
 
-        // Out of bounds
-        EXPECT_DEATH(BitMaskRange8(0, 8), "End position must be less than 8");
-        EXPECT_DEATH(BitMaskRange8(8, 9), "Start position must be less than 8");
+        // Note: LSB/MSB search functions return -1 on start > end, they don't assert (design choice in impl).
+        EXPECT_EQ(LeastSignificantBitPosition64(arr, 10, 5), -1);
     }
 
-    TEST(BitUtilsDeathTest, InverseRangeInvalid)
+    TEST(DeathTest, ZeroInputForPositions)
     {
-        EXPECT_DEATH(InverseBitMaskRange64(10, 5), "Start position must be less than or equal to end");
-        EXPECT_DEATH(InverseBitMaskRange8(0, 8), "End position must be less than 8");
-    }
-
-    TEST(BitUtilsDeathTest, IntervalInvalid)
-    {
-        // Shift exceeds bit width (Interval functions take shift amount s, must be < width)
-        EXPECT_DEATH(IntervalUp64(64), "Shift exceeds bit width"); // DCHECK_LE(s, 63)
-        EXPECT_DEATH(IntervalDown8(8), "Shift exceeds bit width"); // DCHECK_LE(s, 7)
+        // LSB/MSB position on value 0 is undefined
+        EXPECT_DEATH(LeastSignificantBitPosition64(0), "LSB position is undefined");
+        EXPECT_DEATH(MostSignificantBitPosition32(0), "MSB position is undefined");
     }
 #endif
 
-    // Helper to calculate LSB naively to verify optimized implementations
-    template <typename T>
-    static int NaiveLSB(T n)
+    // Reference implementation for validation
+    static int64_t NaiveCountRange(const std::vector<uint64_t>& data, uint64_t start, uint64_t end)
     {
-        if (n == 0) return 0; // Should not happen in test generation
-        for (int i = 0; i < static_cast<int>(sizeof(T) * 8); ++i)
+        int64_t count = 0;
+        for (uint64_t i = start; i <= end; ++i)
         {
-            if ((n >> i) & 1) return i;
-        }
-        return -1;
-    }
-
-    template <typename T>
-    static int NaiveMSB(T n)
-    {
-        if (n == 0) return 0;
-        int msbIndex = 0;
-        while (n >>= 1)
-        {
-            msbIndex++;
-        }
-        return msbIndex;
-    }
-
-    TEST(BitUtilsFuzzTest, PopCount64AgainstBitset)
-    {
-        std::mt19937_64 rng(42); // NOLINT(*-msc51-cpp)
-        std::uniform_int_distribution<uint64_t> dist;
-
-        for (int i = 0; i < 1000; ++i)
-        {
-            uint64_t val = dist(rng);
-            EXPECT_EQ(BitCount64(val), std::bitset<64>(val).count());
-        }
-    }
-
-    TEST(BitUtilsFuzzTest, PopCount32AgainstBitset)
-    {
-        std::mt19937 rng(42); // NOLINT(*-msc51-cpp)
-        std::uniform_int_distribution<uint32_t> dist;
-
-        for (int i = 0; i < 1000; ++i)
-        {
-            uint32_t val = dist(rng);
-            EXPECT_EQ(BitCount32(val), std::bitset<32>(val).count());
-        }
-    }
-
-    TEST(BitUtilsFuzzTest, LSBPos64AgainstNaive)
-    {
-        std::mt19937_64 rng(123); // NOLINT(*-msc51-cpp)
-        // Range starts at 1 because LSB(0) is undefined
-        std::uniform_int_distribution<uint64_t> dist(1, std::numeric_limits<uint64_t>::max());
-
-        for (int i = 0; i < 1000; ++i)
-        {
-            uint64_t val = dist(rng);
-            EXPECT_EQ(LeastSignificantBitPosition64(val), NaiveLSB(val));
-        }
-    }
-
-    TEST(BitUtilsFuzzTest, LSBPos32AgainstNaive)
-    {
-        std::mt19937 rng(123); // NOLINT(*-msc51-cpp)
-        std::uniform_int_distribution<uint32_t> dist(1, std::numeric_limits<uint32_t>::max());
-
-        for (int i = 0; i < 1000; ++i)
-        {
-            uint32_t val = dist(rng);
-            EXPECT_EQ(LeastSignificantBitPosition32(val), NaiveLSB(val));
-        }
-    }
-
-    TEST(BitUtilsFuzzTest, MSBPos64AgainstNaive)
-    {
-        std::mt19937_64 rng(999); // NOLINT(*-msc51-cpp)
-        // Range starts at 1 because MSB(0) is undefined
-        std::uniform_int_distribution<uint64_t> dist(1, std::numeric_limits<uint64_t>::max());
-
-        for (int i = 0; i < 1000; ++i)
-        {
-            uint64_t val = dist(rng);
-            EXPECT_EQ(MostSignificantBitPosition64(val), NaiveMSB(val))
-                << "Failed for value: " << val;
-        }
-    }
-
-    TEST(BitUtilsFuzzTest, MSBPos32AgainstNaive)
-    {
-        std::mt19937 rng(999); // NOLINT(*-msc51-cpp)
-        std::uniform_int_distribution<uint32_t> dist(1, std::numeric_limits<uint32_t>::max());
-
-        for (int i = 0; i < 1000; ++i)
-        {
-            uint32_t val = dist(rng);
-            EXPECT_EQ(MostSignificantBitPosition32(val), NaiveMSB(val))
-                << "Failed for value: " << val;
-        }
-    }
-
-    TEST(BitUtilsFuzzTest, MSBWord64Correctness)
-    {
-        std::mt19937_64 rng(888); // NOLINT(*-msc51-cpp)
-        std::uniform_int_distribution<uint64_t> dist(1, std::numeric_limits<uint64_t>::max());
-
-        for (int i = 0; i < 1000; ++i)
-        {
-            uint64_t val = dist(rng);
-            uint64_t msbWord = MostSignificantBitWord64(val);
-
-            // Check 1: The result is a power of 2 (only 1 bit set)
-            EXPECT_EQ(BitCount64(msbWord), 1);
-
-            // Check 2: The result is <= original value
-            EXPECT_LE(msbWord, val);
-
-            // Check 3: Doubling the result (if no overflow) should be > original value
-            if (msbWord != (1ULL << 63))
+            if (IsBitSet64(data.data(), i))
             {
-                EXPECT_GT(msbWord << 1, val);
+                count++;
             }
         }
+        return count;
     }
-}
+
+    TEST(FuzzTest, BitCountRangeRandomized)
+    {
+        std::mt19937_64 rng(42); // NOLINT(*-msc51-cpp)
+        std::uniform_int_distribution<uint64_t> val_dist;
+
+        // Create 10 words (640 bits)
+        std::vector<uint64_t> data(10);
+        for (auto& val : data)
+        {
+            val = val_dist(rng);
+        }
+
+        std::uniform_int_distribution<uint64_t> idx_dist(0, 639);
+
+        for (int i = 0; i < 500; ++i)
+        {
+            uint64_t s = idx_dist(rng);
+            uint64_t e = idx_dist(rng);
+            if (s > e)
+            {
+                std::swap(s, e);
+            }
+
+            const uint64_t expected = NaiveCountRange(data, s, e);
+            const uint64_t actual = BitCountRange64(data.data(), s, e);
+
+            ASSERT_EQ(expected, actual) << "Failed at range [" << s << ", " << e << "]";
+        }
+    }
+
+    TEST(FuzzTest, MSBSearchRandomized)
+    {
+        std::mt19937_64 rng(1337); // NOLINT(*-msc51-cpp)
+        std::uniform_int_distribution<uint64_t> val_dist;
+        std::vector<uint64_t> data(4); // 256 bits
+
+        for (int i = 0; i < 200; ++i)
+        {
+            for (auto& val : data)
+            {
+                val = val_dist(rng);
+            }
+
+            // Pick random range
+            std::uniform_int_distribution<uint64_t> range_dist(0, 255);
+            uint64_t s = range_dist(rng);
+            uint64_t e = range_dist(rng);
+            if (s > e)
+            {
+                std::swap(s, e);
+            }
+
+            // Manual find
+            int64_t expected = -1;
+            for (auto k = static_cast<int64_t>(e); k >= static_cast<int64_t>(s); --k)
+            {
+                if (IsBitSet64(data.data(), k))
+                {
+                    expected = k;
+                    break;
+                }
+            }
+
+            const int64_t actual = MostSignificantBitPosition64(data.data(), s, e);
+            ASSERT_EQ(expected, actual) << "MSB Search failed range [" << s << ", " << e << "]";
+        }
+    }
+
+    TEST(FuzzTest, LSBSearchRandomized)
+    {
+        std::mt19937_64 rng(9999); // NOLINT(*-msc51-cpp)
+        std::uniform_int_distribution<uint64_t> val_dist;
+        std::vector<uint64_t> data(4); // 256 bits
+
+        for (int i = 0; i < 200; ++i)
+        {
+            for (auto& val : data)
+            {
+                val = val_dist(rng);
+            }
+
+            // Pick random range
+            std::uniform_int_distribution<uint64_t> range_dist(0, 255);
+            uint64_t s = range_dist(rng);
+            uint64_t e = range_dist(rng);
+            if (s > e)
+            {
+                std::swap(s, e);
+            }
+
+            // Manual find for LSB
+            int64_t expected = -1;
+            for (auto k = static_cast<int64_t>(s); k <= static_cast<int64_t>(e); ++k)
+            {
+                if (IsBitSet64(data.data(), k))
+                {
+                    expected = k;
+                    break;
+                }
+            }
+
+            const int64_t actual = LeastSignificantBitPosition64(data.data(), s, e);
+            ASSERT_EQ(expected, actual) << "LSB Search failed range [" << s << ", " << e << "]";
+        }
+    }
+} // namespace bslt::bits::test

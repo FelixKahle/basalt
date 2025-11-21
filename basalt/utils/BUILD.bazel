@@ -53,6 +53,7 @@ cc_library(
     hdrs = [
         "bits.h",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "//basalt/base:config",
         "@abseil-cpp//absl/log:check",

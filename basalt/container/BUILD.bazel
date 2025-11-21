@@ -45,3 +45,27 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "bitset",
+    hdrs = [
+        "bitset.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//basalt/base:config",
+        "//basalt/utils:bits",
+    ],
+)
+
+cc_test(
+    name = "bitset_test",
+    srcs = [
+        "bitset_test.cc",
+    ],
+    deps = [
+        ":bitset",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

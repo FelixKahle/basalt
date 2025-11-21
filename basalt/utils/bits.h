@@ -71,7 +71,10 @@ namespace bslt::bits
     /// @return A 64-bit integer with only the specified bit set.
     constexpr BASALT_FORCE_INLINE uint64_t BitMask64(const uint32_t pos) noexcept
     {
-        DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
+        }
 
         return uint64_t{1} << pos;
     }
@@ -83,7 +86,10 @@ namespace bslt::bits
     /// @return A 32-bit integer with only the specified bit set.
     constexpr BASALT_FORCE_INLINE uint32_t BitMask32(const uint32_t pos) noexcept
     {
-        DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
+        }
 
         return 1U << pos;
     }
@@ -95,7 +101,10 @@ namespace bslt::bits
     /// @return A 16-bit integer with only the specified bit set.
     constexpr BASALT_FORCE_INLINE uint16_t BitMask16(const uint32_t pos) noexcept
     {
-        DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
+        }
 
         return static_cast<uint16_t>(1U << pos);
     }
@@ -107,7 +116,10 @@ namespace bslt::bits
     /// @return An 8-bit integer with only the specified bit set.
     constexpr BASALT_FORCE_INLINE uint8_t BitMask8(const uint32_t pos) noexcept
     {
-        DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
+        }
 
         return static_cast<uint8_t>(1U << pos);
     }
@@ -154,9 +166,12 @@ namespace bslt::bits
     /// @return A 64-bit integer with bits [start, end] set and others cleared.
     constexpr BASALT_FORCE_INLINE uint64_t BitMaskRange64(const uint32_t start, const uint32_t end) noexcept
     {
-        DCHECK_LE(start, 63) << "Start position must be less than 64";
-        DCHECK_LE(end, 63) << "End position must be less than 64";
-        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(start, 63) << "Start position must be less than 64";
+            DCHECK_LE(end, 63) << "End position must be less than 64";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
 
         return (kAllBits64 << start) ^ ((kAllBits64 - 1) << end);
     }
@@ -169,9 +184,12 @@ namespace bslt::bits
     /// @return A 32-bit integer with bits [start, end] set and others cleared.
     constexpr BASALT_FORCE_INLINE uint32_t BitMaskRange32(const uint32_t start, const uint32_t end) noexcept
     {
-        DCHECK_LE(start, 31) << "Start position must be less than 32";
-        DCHECK_LE(end, 31) << "End position must be less than 32";
-        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(start, 31) << "Start position must be less than 32";
+            DCHECK_LE(end, 31) << "End position must be less than 32";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
 
         return (kAllBits32 << start) ^ ((kAllBits32 - 1) << end);
     }
@@ -184,9 +202,12 @@ namespace bslt::bits
     /// @return A 16-bit integer with bits [start, end] set and others cleared.
     constexpr BASALT_FORCE_INLINE uint16_t BitMaskRange16(const uint32_t start, const uint32_t end) noexcept
     {
-        DCHECK_LE(start, 15) << "Start position must be less than 16";
-        DCHECK_LE(end, 15) << "End position must be less than 16";
-        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(start, 15) << "Start position must be less than 16";
+            DCHECK_LE(end, 15) << "End position must be less than 16";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
 
         return static_cast<uint16_t>((kAllBits16 << start) ^ ((kAllBits16 - 1) << end));
     }
@@ -199,9 +220,12 @@ namespace bslt::bits
     /// @return An 8-bit integer with bits [start, end] set and others cleared.
     constexpr BASALT_FORCE_INLINE uint8_t BitMaskRange8(const uint32_t start, const uint32_t end) noexcept
     {
-        DCHECK_LE(start, 7) << "Start position must be less than 8";
-        DCHECK_LE(end, 7) << "End position must be less than 8";
-        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(start, 7) << "Start position must be less than 8";
+            DCHECK_LE(end, 7) << "End position must be less than 8";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
 
         return static_cast<uint8_t>((kAllBits8 << start) ^ ((kAllBits8 - 1) << end));
     }
@@ -248,7 +272,10 @@ namespace bslt::bits
     /// @return A 64-bit integer with all bits set except the specified bit.
     constexpr BASALT_FORCE_INLINE uint64_t InverseBitMask64(const uint32_t pos) noexcept
     {
-        DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LT(pos, 64U) << "Shift amount must be less than 64";
+        }
 
         return ~(uint64_t{1} << pos);
     }
@@ -260,7 +287,10 @@ namespace bslt::bits
     /// @return A 32-bit integer with all bits set except the specified bit.
     constexpr BASALT_FORCE_INLINE uint32_t InverseBitMask32(const uint32_t pos) noexcept
     {
-        DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LT(pos, 32U) << "Shift amount must be less than 32";
+        }
 
         return ~(1U << pos);
     }
@@ -272,7 +302,10 @@ namespace bslt::bits
     /// @return A 16-bit integer with all bits set except the specified bit.
     constexpr BASALT_FORCE_INLINE uint16_t InverseBitMask16(const uint32_t pos) noexcept
     {
-        DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LT(pos, 16U) << "Shift amount must be less than 16";
+        }
 
         return static_cast<uint16_t>(~(1U << pos));
     }
@@ -284,7 +317,10 @@ namespace bslt::bits
     /// @return An 8-bit integer with all bits set except the specified bit.
     constexpr BASALT_FORCE_INLINE uint8_t InverseBitMask8(const uint32_t pos) noexcept
     {
-        DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LT(pos, 8U) << "Shift amount must be less than 8";
+        }
 
         return static_cast<uint8_t>(~(1U << pos));
     }
@@ -331,9 +367,12 @@ namespace bslt::bits
     /// @return A 64-bit integer with bits [start, end] cleared and others set.
     constexpr BASALT_FORCE_INLINE uint64_t InverseBitMaskRange64(const uint32_t start, const uint32_t end) noexcept
     {
-        DCHECK_LE(start, 63) << "Start position must be less than 64";
-        DCHECK_LE(end, 63) << "End position must be less than 64";
-        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(start, 63) << "Start position must be less than 64";
+            DCHECK_LE(end, 63) << "End position must be less than 64";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
 
         // Calculate the positive mask and invert it
         return ~((kAllBits64 << start) ^ ((kAllBits64 - 1) << end));
@@ -347,9 +386,12 @@ namespace bslt::bits
     /// @return A 32-bit integer with bits [start, end] cleared and others set.
     constexpr BASALT_FORCE_INLINE uint32_t InverseBitMaskRange32(const uint32_t start, const uint32_t end) noexcept
     {
-        DCHECK_LE(start, 31) << "Start position must be less than 32";
-        DCHECK_LE(end, 31) << "End position must be less than 32";
-        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(start, 31) << "Start position must be less than 32";
+            DCHECK_LE(end, 31) << "End position must be less than 32";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
 
         return ~((kAllBits32 << start) ^ ((kAllBits32 - 1) << end));
     }
@@ -362,9 +404,12 @@ namespace bslt::bits
     /// @return A 16-bit integer with bits [start, end] cleared and others set.
     constexpr BASALT_FORCE_INLINE uint16_t InverseBitMaskRange16(const uint32_t start, const uint32_t end) noexcept
     {
-        DCHECK_LE(start, 15) << "Start position must be less than 16";
-        DCHECK_LE(end, 15) << "End position must be less than 16";
-        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(start, 15) << "Start position must be less than 16";
+            DCHECK_LE(end, 15) << "End position must be less than 16";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
 
         return static_cast<uint16_t>(~((kAllBits16 << start) ^ ((kAllBits16 - 1) << end)));
     }
@@ -377,9 +422,12 @@ namespace bslt::bits
     /// @return An 8-bit integer with bits [start, end] cleared and others set.
     constexpr BASALT_FORCE_INLINE uint8_t InverseBitMaskRange8(const uint32_t start, const uint32_t end) noexcept
     {
-        DCHECK_LE(start, 7) << "Start position must be less than 8";
-        DCHECK_LE(end, 7) << "End position must be less than 8";
-        DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(start, 7) << "Start position must be less than 8";
+            DCHECK_LE(end, 7) << "End position must be less than 8";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
 
         return static_cast<uint8_t>(~((kAllBits8 << start) ^ ((kAllBits8 - 1) << end)));
     }
@@ -601,7 +649,10 @@ namespace bslt::bits
     /// @note The behavior is undefined if n is 0.
     constexpr BASALT_FORCE_INLINE int LeastSignificantBitPosition64DeBruijn(const uint64_t n) noexcept
     {
-        DCHECK_NE(n, 0ULL) << "LSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0ULL) << "LSB position is undefined for value 0";
+        }
 
         constexpr auto kSeq = uint64_t{0x0218a392dd5fb34f};
         constexpr int kTab[64] = {
@@ -625,7 +676,10 @@ namespace bslt::bits
     /// @note The behavior is undefined if value is 0.
     constexpr BASALT_FORCE_INLINE uint64_t LeastSignificantBitPosition64(const uint64_t value) noexcept
     {
-        DCHECK_NE(value, 0ULL) << "LSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(value, 0ULL) << "LSB position is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint64_t>(std::countr_zero(value));
@@ -643,7 +697,10 @@ namespace bslt::bits
     /// @note The behavior is undefined if value is 0.
     constexpr BASALT_FORCE_INLINE uint32_t LeastSignificantBitPosition32(const uint32_t value) noexcept
     {
-        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint32_t>(std::countr_zero(value));
@@ -659,7 +716,10 @@ namespace bslt::bits
     /// @return The 0-based index of the least significant bit (0-15).
     constexpr BASALT_FORCE_INLINE uint16_t LeastSignificantBitPosition16(const uint16_t value) noexcept
     {
-        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint16_t>(std::countr_zero(value));
@@ -675,7 +735,10 @@ namespace bslt::bits
     /// @return The 0-based index of the least significant bit (0-7).
     constexpr BASALT_FORCE_INLINE uint8_t LeastSignificantBitPosition8(const uint8_t value) noexcept
     {
-        DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(value, 0U) << "LSB position is undefined for value 0";
+        }
 #if BASALT_USE_STD_BIT
         return static_cast<uint8_t>(std::countr_zero(value));
 #else
@@ -726,7 +789,10 @@ namespace bslt::bits
     /// @return A value with only the most significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint64_t MostSignificantBitWord64(uint64_t n) noexcept
     {
-        DCHECK_NE(n, 0ULL) << "MSB word is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0ULL) << "MSB word is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
@@ -748,7 +814,10 @@ namespace bslt::bits
     /// @return A value with only the most significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint32_t MostSignificantBitWord32(uint32_t n) noexcept
     {
-        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
@@ -769,7 +838,10 @@ namespace bslt::bits
     /// @return A value with only the most significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint16_t MostSignificantBitWord16(uint16_t n) noexcept
     {
-        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
@@ -789,7 +861,10 @@ namespace bslt::bits
     /// @return A value with only the most significant bit of n set.
     constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitWord8(uint8_t n) noexcept
     {
-        DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0U) << "MSB word is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return std::bit_floor(n);
@@ -843,7 +918,10 @@ namespace bslt::bits
     /// @return The 0-based index of the most significant bit (0-63).
     constexpr BASALT_FORCE_INLINE uint64_t MostSignificantBitPosition64(uint64_t n) noexcept
     {
-        DCHECK_NE(n, 0ULL) << "MSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0ULL) << "MSB position is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint64_t>(std::bit_width(n) - 1);
@@ -889,7 +967,10 @@ namespace bslt::bits
     /// @return The 0-based index of the most significant bit (0-31).
     constexpr BASALT_FORCE_INLINE uint32_t MostSignificantBitPosition32(uint32_t n) noexcept
     {
-        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint32_t>(std::bit_width(n) - 1);
@@ -930,7 +1011,10 @@ namespace bslt::bits
     /// @return The 0-based index of the most significant bit (0-15).
     constexpr BASALT_FORCE_INLINE uint16_t MostSignificantBitPosition16(uint16_t n) noexcept
     {
-        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint16_t>(std::bit_width(n) - 1);
@@ -966,7 +1050,10 @@ namespace bslt::bits
     /// @return The 0-based index of the most significant bit (0-7).
     constexpr BASALT_FORCE_INLINE uint8_t MostSignificantBitPosition8(uint8_t n) noexcept
     {
-        DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_NE(n, 0U) << "MSB position is undefined for value 0";
+        }
 
 #if BASALT_USE_STD_BIT
         return static_cast<uint8_t>(std::bit_width(n) - 1);
@@ -1255,7 +1342,10 @@ namespace bslt::bits
     /// @return A bitmask with bits set from position s to the most significant bit.
     constexpr BASALT_FORCE_INLINE uint64_t IntervalUp64(const uint64_t s)
     {
-        DCHECK_LE(s, 63) << "Shift exceeds bit width";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(s, 63) << "Shift exceeds bit width";
+        }
 
         return kAllBits64 << s;
     }
@@ -1267,7 +1357,10 @@ namespace bslt::bits
     /// @return A bitmask with bits set from position s to the most significant bit.
     constexpr BASALT_FORCE_INLINE uint32_t IntervalUp32(const uint32_t s)
     {
-        DCHECK_LE(s, 31) << "Shift exceeds bit width";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(s, 31) << "Shift exceeds bit width";
+        }
 
         return kAllBits32 << s;
     }
@@ -1279,7 +1372,10 @@ namespace bslt::bits
     /// @return A bitmask with bits set from position s to the most significant bit.
     constexpr BASALT_FORCE_INLINE uint16_t IntervalUp16(const uint16_t s)
     {
-        DCHECK_LE(s, 15) << "Shift exceeds bit width";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(s, 15) << "Shift exceeds bit width";
+        }
 
         return static_cast<uint16_t>(kAllBits16 << s);
     }
@@ -1291,7 +1387,10 @@ namespace bslt::bits
     /// @return A bitmask with bits set from position s to the most significant bit.
     constexpr BASALT_FORCE_INLINE uint8_t IntervalUp8(const uint8_t s)
     {
-        DCHECK_LE(s, 7) << "Shift exceeds bit width";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(s, 7) << "Shift exceeds bit width";
+        }
 
         return static_cast<uint8_t>(kAllBits8 << s);
     }
@@ -1337,7 +1436,11 @@ namespace bslt::bits
     /// @return A bitmask with bits set from the least significant bit up to position s.
     constexpr BASALT_FORCE_INLINE uint64_t IntervalDown64(const uint64_t s)
     {
-        DCHECK_LE(s, 63) << "Shift exceeds bit width";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(s, 63) << "Shift exceeds bit width";
+        }
+
         return kAllBits64 >> (63 - s);
     }
 
@@ -1348,7 +1451,10 @@ namespace bslt::bits
     /// @return A bitmask with bits set from the least significant bit up to position s.
     constexpr BASALT_FORCE_INLINE uint32_t IntervalDown32(const uint32_t s)
     {
-        DCHECK_LE(s, 31) << "Shift exceeds bit width";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(s, 31) << "Shift exceeds bit width";
+        }
         return kAllBits32 >> (31 - s);
     }
 
@@ -1359,7 +1465,11 @@ namespace bslt::bits
     /// @return A bitmask with bits set from the least significant bit up to position s.
     constexpr BASALT_FORCE_INLINE uint16_t IntervalDown16(const uint16_t s)
     {
-        DCHECK_LE(s, 15) << "Shift exceeds bit width";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(s, 15) << "Shift exceeds bit width";
+        }
+
         return static_cast<uint16_t>(kAllBits16 >> (15 - s));
     }
 
@@ -1370,7 +1480,11 @@ namespace bslt::bits
     /// @return A bitmask with bits set from the least significant bit up to position s.
     constexpr BASALT_FORCE_INLINE uint8_t IntervalDown8(const uint8_t s)
     {
-        DCHECK_LE(s, 7) << "Shift exceeds bit width";
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK_LE(s, 7) << "Shift exceeds bit width";
+        }
+
         return static_cast<uint8_t>(kAllBits8 >> (7 - s));
     }
 
@@ -1406,6 +1520,704 @@ namespace bslt::bits
         {
             static_assert(sizeof(T) == 0, "Unsupported type for IntervalDown");
         }
+    }
+
+    /// @brief Checks if a specific bit is set in an array of 64-bit integers.
+    ///
+    /// @param bitset Pointer to the start of the uint64_t array.
+    /// @param pos The global bit position to check.
+    ///
+    /// @return True if the bit is set (1), false otherwise (0).
+    constexpr BASALT_FORCE_INLINE bool IsBitSet64(const uint64_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        return (bitset[BitOffset64(pos)] & BitMask64(BitPosition64(pos)));
+    }
+
+    /// @brief Checks if a specific bit is set in an array of 32-bit integers.
+    ///
+    /// @param bitset Pointer to the start of the uint32_t array.
+    /// @param pos The global bit position to check.
+    ///
+    /// @return True if the bit is set (1), false otherwise (0).
+    constexpr BASALT_FORCE_INLINE bool IsBitSet32(const uint32_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        return (bitset[BitOffset32(pos)] & BitMask64(BitPosition32(pos)));
+    }
+
+    /// @brief Checks if a specific bit is set in an array of 16-bit integers.
+    ///
+    /// @param bitset Pointer to the start of the uint16_t array.
+    /// @param pos The global bit position to check.
+    ///
+    /// @return True if the bit is set (1), false otherwise (0).
+    constexpr BASALT_FORCE_INLINE bool IsBitSet16(const uint16_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        return (bitset[BitOffset16(pos)] & BitMask64(BitPosition16(pos)));
+    }
+
+    /// @brief Checks if a specific bit is set in an array of 8-bit integers.
+    ///
+    /// @param bitset Pointer to the start of the uint8_t array.
+    /// @param pos The global bit position to check.
+    ///
+    /// @return True if the bit is set (1), false otherwise (0).
+    constexpr BASALT_FORCE_INLINE bool IsBitSet8(const uint8_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        return (bitset[BitOffset8(pos)] & BitMask64(BitPosition8(pos)));
+    }
+
+    /// @brief Generic template to check if a bit is set in an array of any unsigned integer type.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param pos The global bit position to check.
+    ///
+    /// @return True if the bit is set (1), false otherwise (0).
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE bool IsBitSet(const T* const bitset, const uint64_t pos) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return IsBitSet64(bitset, pos);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return IsBitSet32(bitset, pos);
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return IsBitSet16(bitset, pos);
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return IsBitSet8(bitset, pos);
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for IsBitSet");
+        }
+    }
+
+    /// @brief Sets a specific bit in an array of 64-bit integers.
+    ///
+    /// @param bitset Pointer to the start of the uint64_t array.
+    /// @param pos The global bit position to set.
+    constexpr BASALT_FORCE_INLINE void SetBit64(uint64_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        bitset[BitOffset64(pos)] |= BitMask64(BitPosition64(pos));
+    }
+
+    /// @brief Sets a specific bit in an array of 32-bit integers.
+    ///
+    /// @param bitset Pointer to the start of the uint32_t array.
+    /// @param pos The global bit position to set.
+    constexpr BASALT_FORCE_INLINE void SetBit32(uint32_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        bitset[BitOffset32(pos)] |= BitMask32(BitPosition32(pos));
+    }
+
+    /// @brief Sets a specific bit in an array of 16-bit integers.
+    ///
+    /// @param bitset Pointer to the start of the uint16_t array.
+    /// @param pos The global bit position to set.
+    constexpr BASALT_FORCE_INLINE void SetBit16(uint16_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        bitset[BitOffset16(pos)] |= BitMask16(BitPosition16(pos));
+    }
+
+    /// @brief Sets a specific bit in an array of 8-bit integers.
+    ///
+    /// @param bitset Pointer to the start of the uint8_t array.
+    /// @param pos The global bit position to set.
+    constexpr BASALT_FORCE_INLINE void SetBit8(uint8_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        bitset[BitOffset8(pos)] |= BitMask8(BitPosition8(pos));
+    }
+
+    /// @brief Generic template to set a bit in an array of any unsigned integer type.
+    ///
+    /// @tparam T An unsigned integer type.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param pos The global bit position to set.
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE void SetBit(T* const bitset, const uint64_t pos) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            SetBit64(bitset, pos);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            SetBit32(bitset, static_cast<uint32_t>(pos));
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            SetBit16(bitset, static_cast<uint16_t>(pos));
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            SetBit8(bitset, static_cast<uint8_t>(pos));
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for SetBit");
+        }
+    }
+
+    constexpr BASALT_FORCE_INLINE void ClearBit64(uint64_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        bitset[BitOffset64(pos)] &= ~BitMask64(BitPosition64(pos));
+    }
+
+    constexpr BASALT_FORCE_INLINE void ClearBit32(uint32_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        bitset[BitOffset32(pos)] &= ~BitMask32(BitPosition32(pos));
+    }
+
+    constexpr BASALT_FORCE_INLINE void ClearBit16(uint16_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        bitset[BitOffset16(pos)] &= ~BitMask16(BitPosition16(pos));
+    }
+
+    constexpr BASALT_FORCE_INLINE void ClearBit8(uint8_t* const bitset, const uint64_t pos) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        bitset[BitOffset8(pos)] &= ~BitMask8(BitPosition8(pos));
+    }
+
+    // ReSharper disable once CppNotAllPathsReturnValue
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE void ClearBit(T* const bitset, const uint64_t pos) noexcept
+    {
+        if constexpr (std::is_same_v<T, uint64_t>)
+        {
+            return ClearBit64(bitset, pos);
+        }
+        else if constexpr (std::is_same_v<T, uint32_t>)
+        {
+            return ClearBit32(bitset, static_cast<uint32_t>(pos));
+        }
+        else if constexpr (std::is_same_v<T, uint16_t>)
+        {
+            return ClearBit16(bitset, static_cast<uint16_t>(pos));
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            return ClearBit8(bitset, static_cast<uint8_t>(pos));
+        }
+        else
+        {
+            static_assert(sizeof(T) == 0, "Unsupported type for ClearBit");
+        }
+    }
+
+    template <typename T>
+    constexpr BASALT_FORCE_INLINE uint64_t BitCountRange(const T* const bitset, const uint64_t start,
+                                                         const uint64_t end) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
+
+        const uint64_t start_idx = BitOffset<T>(start);
+        const uint64_t end_idx = BitOffset<T>(end);
+        const uint32_t start_bit = BitPosition<T>(start);
+        const uint32_t end_bit = BitPosition<T>(end);
+
+        if (start_idx == end_idx)
+        {
+            const T mask = BitMaskRange<T>(start_bit, end_bit);
+            // ReSharper disable once CppDFANullDereference
+            return BitCount<T>(bitset[start_idx] & mask);
+        }
+
+        uint64_t count = 0;
+        // ReSharper disable once CppDFANullDereference
+        count += BitCount<T>(bitset[start_idx] & IntervalUp<T>(static_cast<T>(start_bit)));
+
+        for (uint64_t i = start_idx + 1; i < end_idx; ++i)
+        {
+            count += BitCount<T>(bitset[i]);
+        }
+        count += BitCount<T>(bitset[end_idx] & IntervalDown<T>(static_cast<T>(end_bit)));
+
+        return count;
+    }
+
+    /// @brief Counts the number of set bits in a range within a uint64_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The count of set bits in the range [start, end].
+    constexpr BASALT_FORCE_INLINE uint64_t BitCountRange64(const uint64_t* const bitset, const uint64_t start,
+                                                           const uint64_t end) noexcept
+    {
+        return BitCountRange<uint64_t>(bitset, start, end);
+    }
+
+    /// @brief Counts the number of set bits in a range within a uint32_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The count of set bits in the range [start, end].
+    constexpr BASALT_FORCE_INLINE uint64_t BitCountRange32(const uint32_t* const bitset, const uint64_t start,
+                                                           const uint64_t end) noexcept
+    {
+        return BitCountRange<uint32_t>(bitset, start, end);
+    }
+
+    /// @brief Counts the number of set bits in a range within a uint16_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The count of set bits in the range [start, end].
+    constexpr BASALT_FORCE_INLINE uint64_t BitCountRange16(const uint16_t* const bitset, const uint64_t start,
+                                                           const uint64_t end) noexcept
+    {
+        return BitCountRange<uint16_t>(bitset, start, end);
+    }
+
+    /// @brief Counts the number of set bits in a range within a uint8_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The count of set bits in the range [start, end].
+    constexpr BASALT_FORCE_INLINE uint64_t BitCountRange8(const uint8_t* const bitset, const uint64_t start,
+                                                          const uint64_t end) noexcept
+    {
+        return BitCountRange<uint8_t>(bitset, start, end);
+    }
+
+    /// @brief Internal generic implementation for checking if a range is empty.
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr bool IsEmptyRange(const T* const bitset, const uint64_t start, const uint64_t end) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+            DCHECK_LE(start, end) << "Start position must be less than or equal to end position";
+        }
+
+        const uint64_t start_idx = BitOffset<T>(start);
+        const uint64_t end_idx = BitOffset<T>(end);
+        const uint32_t start_bit = BitPosition<T>(start);
+        const uint32_t end_bit = BitPosition<T>(end);
+
+        if (start_idx == end_idx)
+        {
+            const T mask = BitMaskRange<T>(start_bit, end_bit);
+            // ReSharper disable once CppDFANullDereference
+            return (bitset[start_idx] & mask) == 0;
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        if ((bitset[start_idx] & IntervalUp<T>(static_cast<T>(start_bit))) != 0)
+        {
+            return false;
+        }
+
+        for (uint64_t i = start_idx + 1; i < end_idx; ++i)
+        {
+            if (bitset[i] != 0)
+            {
+                return false;
+            }
+        }
+
+        // ReSharper disable once CppDFANullDereference
+        if ((bitset[end_idx] & IntervalDown<T>(static_cast<T>(end_bit))) != 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// @brief Checks if all bits in the specified range are 0 (cleared) in a uint64_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return True if all bits in [start, end] are 0.
+    constexpr BASALT_FORCE_INLINE bool IsEmptyRange64(const uint64_t* const bitset, const uint64_t start,
+                                                      const uint64_t end) noexcept
+    {
+        return IsEmptyRange<uint64_t>(bitset, start, end);
+    }
+
+    /// @brief Checks if all bits in the specified range are 0 (cleared) in a uint32_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return True if all bits in [start, end] are 0.
+    constexpr BASALT_FORCE_INLINE bool IsEmptyRange32(const uint32_t* const bitset, const uint64_t start,
+                                                      const uint64_t end) noexcept
+    {
+        return IsEmptyRange<uint32_t>(bitset, start, end);
+    }
+
+    /// @brief Checks if all bits in the specified range are 0 (cleared) in a uint16_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return True if all bits in [start, end] are 0.
+    constexpr BASALT_FORCE_INLINE bool IsEmptyRange16(const uint16_t* const bitset, const uint64_t start,
+                                                      const uint64_t end) noexcept
+    {
+        return IsEmptyRange<uint16_t>(bitset, start, end);
+    }
+
+    /// @brief Checks if all bits in the specified range are 0 (cleared) in a uint8_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return True if all bits in [start, end] are 0.
+    constexpr BASALT_FORCE_INLINE bool IsEmptyRange8(const uint8_t* const bitset, const uint64_t start,
+                                                     const uint64_t end) noexcept
+    {
+        return IsEmptyRange<uint8_t>(bitset, start, end);
+    }
+
+    /// @brief Internal generic implementation to find the first set bit in a range.
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr BASALT_FORCE_INLINE int64_t LeastSignificantBitPosition(const T* const bitset, const uint64_t start,
+                                                                      const uint64_t end) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        if (start > end)
+        {
+            return -1;
+        }
+
+        const uint64_t start_idx = BitOffset<T>(start);
+        const uint64_t end_idx = BitOffset<T>(end);
+        const uint32_t start_bit = BitPosition<T>(start);
+        const uint32_t end_bit = BitPosition<T>(end);
+        constexpr uint64_t kBitsPerWord = sizeof(T) * 8;
+
+        if (start_idx == end_idx)
+        {
+            const T mask = BitMaskRange<T>(start_bit, end_bit);
+            // ReSharper disable once CppDFANullDereference
+            const T val = bitset[start_idx] & mask;
+            if (val == 0)
+            {
+                return -1;
+            }
+
+            // Convert local bit index to global index
+            return static_cast<int64_t>((start_idx * kBitsPerWord) + LeastSignificantBitPosition<T>(val));
+        }
+
+        {
+            const T mask = IntervalUp<T>(static_cast<T>(start_bit));
+            // ReSharper disable once CppDFANullDereference
+            const T val = bitset[start_idx] & mask;
+            if (val != 0)
+            {
+                return static_cast<int64_t>((start_idx * kBitsPerWord) + LeastSignificantBitPosition<T>(val));
+            }
+        }
+
+        for (uint64_t i = start_idx + 1; i < end_idx; ++i)
+        {
+            // ReSharper disable once CppDFANullDereference
+            const T val = bitset[i];
+            if (val != 0)
+            {
+                return static_cast<int64_t>((i * kBitsPerWord) + LeastSignificantBitPosition<T>(val));
+            }
+        }
+
+        {
+            const T mask = IntervalDown<T>(static_cast<T>(end_bit));
+            const T val = bitset[end_idx] & mask;
+            if (val != 0)
+            {
+                return static_cast<int64_t>((end_idx * kBitsPerWord) + LeastSignificantBitPosition<T>(val));
+            }
+        }
+
+        return -1;
+    }
+
+    /// @brief Finds the index of the first set bit in the range [start, end] in a uint64_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The global index of the first set bit, or -1 if no bit is set.
+    constexpr BASALT_FORCE_INLINE int64_t LeastSignificantBitPosition64(const uint64_t* const bitset,
+                                                                        const uint64_t start,
+                                                                        const uint64_t end) noexcept
+    {
+        return LeastSignificantBitPosition<uint64_t>(bitset, start, end);
+    }
+
+    /// @brief Finds the index of the first set bit in the range [start, end] in a uint32_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The global index of the first set bit, or -1 if no bit is set.
+    constexpr BASALT_FORCE_INLINE int64_t LeastSignificantBitPosition32(const uint32_t* const bitset,
+                                                                        const uint64_t start,
+                                                                        const uint64_t end) noexcept
+    {
+        return LeastSignificantBitPosition<uint32_t>(bitset, start, end);
+    }
+
+    /// @brief Finds the index of the first set bit in the range [start, end] in a uint16_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The global index of the first set bit, or -1 if no bit is set.
+    constexpr BASALT_FORCE_INLINE int64_t LeastSignificantBitPosition16(const uint16_t* const bitset,
+                                                                        const uint64_t start,
+                                                                        const uint64_t end) noexcept
+    {
+        return LeastSignificantBitPosition<uint16_t>(bitset, start, end);
+    }
+
+    /// @brief Finds the index of the first set bit in the range [start, end] in a uint8_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The global index of the first set bit, or -1 if no bit is set.
+    constexpr BASALT_FORCE_INLINE int64_t LeastSignificantBitPosition8(const uint8_t* const bitset,
+                                                                       const uint64_t start,
+                                                                       const uint64_t end) noexcept
+    {
+        return LeastSignificantBitPosition<uint8_t>(bitset, start, end);
+    }
+
+    /// @brief Internal generic implementation to find the last set bit (highest index) in a range.
+    template <typename T>
+        requires std::is_unsigned_v<T>
+    constexpr int64_t MostSignificantBitPosition(const T* const bitset, const uint64_t start,
+                                                 const uint64_t end) noexcept
+    {
+        if (!std::is_constant_evaluated())
+        {
+            DCHECK(bitset != nullptr) << "Bitset pointer is null";
+        }
+
+        if (start > end)
+        {
+            return -1;
+        }
+
+        const uint64_t start_idx = BitOffset<T>(start);
+        const uint64_t end_idx = BitOffset<T>(end);
+        const uint32_t start_bit = BitPosition<T>(start);
+        const uint32_t end_bit = BitPosition<T>(end);
+        constexpr uint64_t kBitsPerWord = sizeof(T) * 8;
+
+        if (start_idx == end_idx)
+        {
+            const T mask = BitMaskRange<T>(start_bit, end_bit);
+            // ReSharper disable once CppDFANullDereference
+            const T val = bitset[start_idx] & mask;
+
+            if (val == 0)
+            {
+                return -1;
+            }
+
+            return static_cast<int64_t>((start_idx * kBitsPerWord) + MostSignificantBitPosition<T>(val));
+        }
+
+        {
+            const T mask = IntervalDown<T>(static_cast<T>(end_bit));
+            // ReSharper disable once CppDFANullDereference
+            const T val = bitset[end_idx] & mask;
+            if (val != 0)
+            {
+                return static_cast<int64_t>((end_idx * kBitsPerWord) + MostSignificantBitPosition<T>(val));
+            }
+        }
+
+        for (uint64_t i = end_idx - 1; i > start_idx; --i)
+        {
+            const T val = bitset[i];
+            if (val != 0)
+            {
+                return static_cast<int64_t>((i * kBitsPerWord) + MostSignificantBitPosition<T>(val));
+            }
+        }
+
+        {
+            const T mask = IntervalUp<T>(static_cast<T>(start_bit));
+            const T val = bitset[start_idx] & mask;
+            if (val != 0)
+            {
+                return static_cast<int64_t>((start_idx * kBitsPerWord) + MostSignificantBitPosition<T>(val));
+            }
+        }
+
+        return -1;
+    }
+
+    /// @brief Finds the index of the last set bit (highest index) in the range [start, end] in a uint64_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The global index of the highest set bit, or -1 if no bit is set.
+    constexpr BASALT_FORCE_INLINE int64_t MostSignificantBitPosition64(const uint64_t* const bitset,
+                                                                       const uint64_t start,
+                                                                       const uint64_t end) noexcept
+    {
+        return MostSignificantBitPosition<uint64_t>(bitset, start, end);
+    }
+
+    /// @brief Finds the index of the last set bit (highest index) in the range [start, end] in a uint32_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The global index of the highest set bit, or -1 if no bit is set.
+    constexpr BASALT_FORCE_INLINE int64_t MostSignificantBitPosition32(const uint32_t* const bitset,
+                                                                       const uint64_t start,
+                                                                       const uint64_t end) noexcept
+    {
+        return MostSignificantBitPosition<uint32_t>(bitset, start, end);
+    }
+
+    /// @brief Finds the index of the last set bit (highest index) in the range [start, end] in a uint16_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The global index of the highest set bit, or -1 if no bit is set.
+    constexpr BASALT_FORCE_INLINE int64_t MostSignificantBitPosition16(const uint16_t* const bitset,
+                                                                       const uint64_t start,
+                                                                       const uint64_t end) noexcept
+    {
+        return MostSignificantBitPosition<uint16_t>(bitset, start, end);
+    }
+
+    /// @brief Finds the index of the last set bit (highest index) in the range [start, end] in a uint8_t array.
+    ///
+    /// @param bitset Pointer to the start of the array.
+    /// @param start The global starting bit index (inclusive).
+    /// @param end The global ending bit index (inclusive).
+    ///
+    /// @return The global index of the highest set bit, or -1 if no bit is set.
+    constexpr BASALT_FORCE_INLINE int64_t MostSignificantBitPosition8(const uint8_t* const bitset, const uint64_t start,
+                                                                      const uint64_t end) noexcept
+    {
+        return MostSignificantBitPosition<uint8_t>(bitset, start, end);
     }
 }
 
