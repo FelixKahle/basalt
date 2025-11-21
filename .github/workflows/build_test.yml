@@ -59,9 +59,10 @@ jobs:
             # On Windows, Bazel auto-detects MSVC. We don't set CC/CXX.
             cc: ""
             cxx: ""
-            # MSVC uses /std:c++latest or /std:c++20 (VS2022 supports c++23 partial)
-            # Note: We use forward slash for MSVC flags
-            std_flag: "--cxxopt='/std:c++latest'"
+            # MSVC specific flags:
+            # /std:c++20      -> Enable C++20 standard
+            # /Zc:__cplusplus -> Force correct __cplusplus macro value (Crucial for version checks)
+            std_flag: "--cxxopt='/std:c++20' --cxxopt='/Zc:__cplusplus'"
 
     env:
       # Force Bazel to use the specific compiler for Linux/Mac
