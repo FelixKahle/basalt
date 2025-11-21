@@ -28,6 +28,7 @@
 #include <functional>
 #include <type_traits>
 #include "absl/log/check.h"
+#include "absl/strings/str_format.h"
 #include "absl/hash/hash.h"
 #include "basalt/base/config.h"
 #include "basalt/type_traits/type_traits.h"

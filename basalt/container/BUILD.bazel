@@ -54,7 +54,10 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//basalt/base:config",
+        "//basalt/type_traits",
         "//basalt/utils:bits",
+        "@abseil-cpp//absl/strings:str_format",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
