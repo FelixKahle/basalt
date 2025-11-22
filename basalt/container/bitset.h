@@ -775,6 +775,7 @@ namespace bslt
         /// @tparam Func The type of the callback function.
         /// @param func The callback to invoke for each set bit index.
         template <typename Func>
+            requires std::is_invocable_v<Func, SizeType>
         void ForEachSetBit(Func&& func) const
         {
             for (SizeType i = 0; i < data_.size(); ++i)
@@ -792,6 +793,44 @@ namespace bslt
                 }
             }
         }
+
+        /// @brief Efficiently iterates over every unset bit using a callback.
+        ///
+        /// This method avoids checking every bit by skipping full words and
+        /// iterating only over unset bits within words.
+        ///
+        /// @tparam Func The type of the callback function.
+        ///
+        /// @param func The callback to invoke for each unset bit index.
+        template <typename Func>
+            requires std::is_invocable_v<Func, SizeType>
+        void ForEachUnsetBit(Func&& func) const
+        {
+            if (num_bits_ == 0) return;
+
+            for (SizeType i = 0; i < data_.size(); ++i)
+            {
+                // ReSharper disable once CppDFANullDereference
+                StorageType word = ~data_[i];
+
+                if (i == data_.size() - 1)
+                {
+                    const SizeType extra = num_bits_ % kBitsPerWord;
+                    if (extra != 0)
+                    {
+                        word &= (StorageType{1} << extra) - 1;
+                    }
+                }
+
+                while (word != 0)
+                {
+                    StorageType lsb = bits::LeastSignificantBitPosition<StorageType>(word);
+                    func(static_cast<SizeType>(i * kBitsPerWord + lsb));
+                    word &= (word - 1); // clear LSB
+                }
+            }
+        }
+
 
         /// @brief Performs a bitwise AND assignment with another bitset.
         ///
@@ -980,6 +1019,7 @@ namespace bslt
         ///
         /// The string consists of '0' and '1' characters, with the highest index
         /// at the beginning (left) of the string.
+        /// This will create a string allocating memory.
         ///
         /// @return A string containing the binary representation.
         [[nodiscard]] std::string ToString() const
@@ -1026,9 +1066,10 @@ namespace bslt
         }
 
     private:
+        /// @brief Number of bits per storage word.
         static constexpr SizeType kBitsPerWord = sizeof(StorageType) * 8;
 
-        BASALT_FORCE_INLINE void ClearUnusedBits()
+        BASALT_FORCE_INLINE void ClearUnusedBits() noexcept
         {
             if (num_bits_ == 0)
             {

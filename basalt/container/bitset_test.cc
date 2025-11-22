@@ -220,9 +220,12 @@ namespace bslt::test
     {
         using Bitset = TestFixture::BitsetT;
         Bitset b(100, false);
-        std::vector<size_t> expected = {2, 15, 63, 64, 90};
+        const std::vector<size_t> expected = {2, 15, 63, 64, 90};
 
-        for (auto idx : expected) b.Set(idx);
+        for (auto idx : expected)
+        {
+            b.Set(idx);
+        }
 
         std::vector<size_t> actual;
         b.ForEachSetBit([&](size_t idx)
@@ -231,6 +234,68 @@ namespace bslt::test
         });
 
         EXPECT_EQ(actual, expected);
+    }
+
+    TYPED_TEST(BitsetTest, ForEachUnsetBit)
+    {
+        using Bitset = TestFixture::BitsetT;
+
+        {
+            Bitset b(100, true); // Initialize to all 1s
+            const std::vector<size_t> expected = {2, 15, 63, 64, 90, 99};
+
+            // Clear specific bits (these should be detected)
+            for (auto idx : expected)
+            {
+                b.Clear(idx);
+            }
+
+
+            std::vector<size_t> actual;
+            b.ForEachUnsetBit([&](size_t idx)
+            {
+                actual.push_back(idx);
+            });
+
+            EXPECT_EQ(actual, expected);
+        }
+
+        {
+            // Create a bitset that doesn't align perfectly with storage words.
+            // E.g., if Storage is uint64_t, size 66 leaves 62 padding bits.
+            // If logic is wrong, inverting 0-padding makes them 1, and they might be visited.
+            Bitset b(66, true);
+            b.Clear(65);
+
+            std::vector<size_t> actual;
+            b.ForEachUnsetBit([&](size_t idx) { actual.push_back(idx); });
+
+            ASSERT_EQ(actual.size(), 1);
+            EXPECT_EQ(actual[0], 65);
+        }
+
+        {
+            Bitset b(5, false); // 00000
+            std::vector<size_t> actual;
+            b.ForEachUnsetBit([&](size_t idx) { actual.push_back(idx); });
+
+            const std::vector<size_t> expected = {0, 1, 2, 3, 4};
+            EXPECT_EQ(actual, expected);
+        }
+
+        {
+            Bitset b(50, true);
+            size_t count = 0;
+            b.ForEachUnsetBit([&](size_t) { count++; });
+            EXPECT_EQ(count, 0);
+        }
+
+        {
+            Bitset b(0);
+            bool visited = false;
+            b.ForEachUnsetBit([&](size_t) { visited = true; });
+            EXPECT_FALSE(visited);
+        }
     }
 
     TYPED_TEST(BitsetTest, BitwiseOperators)
