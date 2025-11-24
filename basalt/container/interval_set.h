@@ -79,7 +79,7 @@ namespace bslt
         /// @brief The underlying container type.
         using container_type = std::vector<IntervalType>;
         /// @brief A non-const iterator to the underlying container.
-        using iterator = container_type::const_iterator;
+        using iterator = container_type::iterator;
         /// @brief A const iterator to the underlying container.
         using const_iterator = container_type::const_iterator;
         /// @brief The size type.
@@ -288,7 +288,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate_mutable(new_interval.GetStart());
+            auto it = lower_bound(new_interval.GetStart());
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -327,7 +327,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate_mutable(sub_with_floor(new_interval.GetStart(), epsilon));
+            auto it = lower_bound(sub_with_floor(new_interval.GetStart(), epsilon));
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -370,7 +370,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate_mutable(interval_to_remove.GetStart());
+            auto it = lower_bound(interval_to_remove.GetStart());
             if (it == intervals_.end() || !interval_to_remove.Intersects(*it))
             {
                 return;
@@ -457,7 +457,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate_mutable(sub_with_floor(interval_to_remove.GetStart(), epsilon));
+            auto it = lower_bound(sub_with_floor(interval_to_remove.GetStart(), epsilon));
             if (it == intervals_.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
                 return;
@@ -725,7 +725,7 @@ namespace bslt
                 return;
             }
 
-            auto it_first = find_first_candidate_mutable(boundary.GetStart());
+            auto it_first = lower_bound(boundary.GetStart());
 
             constexpr auto comp_start = [](const IntervalType& i, ValueType v)
             {
@@ -868,7 +868,7 @@ namespace bslt
                     return true;
                 }
             }
-            auto it_check = find_first_candidate(sub_with_floor(v, epsilon));
+            auto it_check = lower_bound(sub_with_floor(v, epsilon));
             if (it_check != intervals_.end() && it_check->Contains(v, epsilon))
             {
                 return true;
@@ -907,7 +907,7 @@ namespace bslt
             {
                 return true;
             }
-            auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
+            auto it = lower_bound(sub_with_floor(other.GetStart(), epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -926,7 +926,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = find_first_candidate(other.GetStart());
+            auto it = lower_bound(other.GetStart());
             if (it == intervals_.end())
             {
                 return false;
@@ -948,7 +948,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
+            auto it = lower_bound(sub_with_floor(other.GetStart(), epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -967,9 +967,29 @@ namespace bslt
             return !(lhs == rhs);
         }
 
-    private:
-        using mutable_iterator = container_type::iterator;
+        /// @brief Finds the first interval `it` such that `it.GetEnd() >= v`. (const)
+        ///
+        /// @param v The value to search for.
+        /// @return A const_iterator to the first candidate, or `end()`.
+        BASALT_FORCE_INLINE const_iterator lower_bound(ValueType v) const noexcept
+        {
+            constexpr auto comp = [](const IntervalType& i, ValueType value)
+            {
+                return i.GetEnd() < value;
+            };
+            return std::lower_bound(intervals_.cbegin(), intervals_.cend(), v, comp);
+        }
 
+        BASALT_FORCE_INLINE iterator lower_bound(ValueType v) noexcept
+        {
+            constexpr auto comp = [](const IntervalType& i, ValueType value)
+            {
+                return i.GetEnd() < value;
+            };
+            return std::lower_bound(intervals_.begin(), intervals_.end(), v, comp);
+        }
+
+    private:
         /// @brief Subtracts rhs from lhs with floor at zero for unsigned types.
         ///
         /// @param lhs The left-hand side value.
@@ -987,28 +1007,6 @@ namespace bslt
                 // Fast path for signed types.
                 return lhs - rhs;
             }
-        }
-
-        BASALT_FORCE_INLINE mutable_iterator find_first_candidate_mutable(ValueType v) noexcept
-        {
-            constexpr auto comp = [](const IntervalType& i, ValueType value)
-            {
-                return i.GetEnd() < value;
-            };
-            return std::lower_bound(intervals_.begin(), intervals_.end(), v, comp);
-        }
-
-        /// @brief Finds the first interval `it` such that `it.GetEnd() >= v`. (const)
-        ///
-        /// @param v The value to search for.
-        /// @return A const_iterator to the first candidate, or `end()`.
-        BASALT_FORCE_INLINE const_iterator find_first_candidate(ValueType v) const noexcept
-        {
-            constexpr auto comp = [](const IntervalType& i, ValueType value)
-            {
-                return i.GetEnd() < value;
-            };
-            return std::lower_bound(intervals_.cbegin(), intervals_.cend(), v, comp);
         }
 
         /// @brief Finds the interval that *could* contain `v`.
@@ -1267,7 +1265,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(new_interval.GetStart());
+            auto it = lower_bound(new_interval.GetStart());
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -1299,7 +1297,7 @@ namespace bslt
             }
 
             // Search for start - epsilon
-            auto it = find_first_candidate(sub_with_floor(new_interval.GetStart(), epsilon));
+            auto it = lower_bound(sub_with_floor(new_interval.GetStart(), epsilon));
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -1400,7 +1398,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(interval_to_remove.GetStart());
+            auto it = lower_bound(interval_to_remove.GetStart());
 
             if (it == intervals_.end() || !interval_to_remove.Intersects(*it))
             {
@@ -1458,7 +1456,7 @@ namespace bslt
                 return;
             }
 
-            auto it = find_first_candidate(sub_with_floor(interval_to_remove.GetStart(), epsilon));
+            auto it = lower_bound(sub_with_floor(interval_to_remove.GetStart(), epsilon));
 
             if (it == intervals_.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
@@ -1639,7 +1637,7 @@ namespace bslt
                 return;
             }
 
-            auto it_keep = find_first_candidate(boundary.GetStart());
+            auto it_keep = lower_bound(boundary.GetStart());
             intervals_.erase(intervals_.begin(), it_keep);
 
             auto it_erase = intervals_.begin();
@@ -1744,9 +1742,9 @@ namespace bslt
         [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v) const noexcept
         {
             // For disjoint intervals stored in a BTree, finding the candidate is tricky with
-            // the strict comparator. We use find_first_candidate to find the first interval
+            // the strict comparator. We use lower_bound to find the first interval
             // that ends *after* v.
-            auto it = find_first_candidate(v);
+            auto it = lower_bound(v);
             if (it == intervals_.end())
             {
                 return false;
@@ -1762,7 +1760,7 @@ namespace bslt
         /// @return \c true if the value is contained within epsilon, \c false otherwise.
         [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v, const ValueType epsilon) const noexcept
         {
-            auto it = find_first_candidate(sub_with_floor(v, epsilon));
+            auto it = lower_bound(sub_with_floor(v, epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -1780,7 +1778,7 @@ namespace bslt
             {
                 return true;
             }
-            auto it = find_first_candidate(other.GetStart());
+            auto it = lower_bound(other.GetStart());
             if (it == intervals_.end())
             {
                 return false;
@@ -1800,7 +1798,7 @@ namespace bslt
             {
                 return true;
             }
-            auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
+            auto it = lower_bound(sub_with_floor(other.GetStart(), epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -1819,7 +1817,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = find_first_candidate(other.GetStart());
+            auto it = lower_bound(other.GetStart());
             if (it == intervals_.end())
             {
                 return false;
@@ -1841,7 +1839,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = find_first_candidate(sub_with_floor(other.GetStart(), epsilon));
+            auto it = lower_bound(sub_with_floor(other.GetStart(), epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -1858,6 +1856,24 @@ namespace bslt
         friend BASALT_FORCE_INLINE bool operator!=(const IntervalSet& lhs, const IntervalSet& rhs)
         {
             return !(lhs == rhs);
+        }
+
+        /// @brief Finds the first interval `it` such that `it.GetEnd() > v`. (const)
+        ///
+        /// @param v The value to search for.
+        /// @return A const iterator to the first candidate, or `end()`.
+        BASALT_FORCE_INLINE const_iterator lower_bound(const ValueType v) const noexcept
+        {
+            return intervals_.lower_bound(IntervalType(v, v));
+        }
+
+        /// @brief Finds the first interval `it` such that `it.GetEnd() > v`. (const)
+        ///
+        /// @param v The value to search for.
+        /// @return A const iterator to the first candidate, or `end()`.
+        BASALT_FORCE_INLINE iterator lower_bound(const ValueType v) noexcept
+        {
+            return intervals_.lower_bound(IntervalType(v, v));
         }
 
     private:
@@ -1878,15 +1894,6 @@ namespace bslt
                 // Fast path for signed types.
                 return lhs - rhs;
             }
-        }
-
-        /// @brief Finds the first interval `it` such that `it.GetEnd() > v`. (const)
-        ///
-        /// @param v The value to search for.
-        /// @return A const iterator to the first candidate, or `end()`.
-        BASALT_FORCE_INLINE const_iterator find_first_candidate(const ValueType v) const noexcept
-        {
-            return intervals_.lower_bound(IntervalType(v, v));
         }
 
         container_type intervals_;
