@@ -113,6 +113,25 @@ namespace bslt
     public:
         using ValueType = T;
 
+        /// @brief Default constructor creating an empty interval [0, 0).
+        ///
+        /// This constructor initializes both the start and end values to zero,
+        /// resulting in an empty interval.
+        constexpr BASALT_FORCE_INLINE ClosedOpenInterval() noexcept
+            : start_inclusive_(T{0}),
+              end_exclusive_(T{0})
+        {
+        }
+
+        /// @brief Constructs an empty interval [0, 0).
+        ///
+        /// This static method returns an interval where both the start and end
+        /// values are zero, representing an empty interval.
+        static constexpr BASALT_FORCE_INLINE ClosedOpenInterval Empty() noexcept
+        {
+            return ClosedOpenInterval(T{0}, T{0});
+        }
+
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
@@ -245,7 +264,7 @@ namespace bslt
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(
             const ClosedOpenInterval<OtherType> other) const noexcept
         {
-            return other.start_inclusive_ >= start_inclusive_ && other.end_exclusive_ <= end_exclusive_;
+            return other.GetStart() >= start_inclusive_ && other.GetEnd() <= end_exclusive_;
         }
 
         /// @brief Checks if the interval fully contains another interval with tolerance.
@@ -262,8 +281,8 @@ namespace bslt
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(const ClosedOpenInterval<OtherType> other,
                                                                           const T epsilon) const noexcept
         {
-            return other.start_inclusive_ >= (start_inclusive_ - epsilon) &&
-                other.end_exclusive_ <= (end_exclusive_ + epsilon);
+            return other.GetStart() >= (start_inclusive_ - epsilon) &&
+                other.GetEnd() <= (end_exclusive_ + epsilon);
         }
 
         /// @brief Checks if the current interval intersects with another interval.
@@ -621,6 +640,25 @@ namespace bslt
     public:
         using ValueType = T;
 
+        /// @brief Default constructor creating an empty interval (0, 0].
+        ///
+        /// This constructor initializes both the start and end values to zero,
+        /// resulting in an empty interval.
+        constexpr BASALT_FORCE_INLINE OpenClosedInterval() noexcept
+            : start_exclusive_(T{0}),
+              end_inclusive_(T{0})
+        {
+        }
+
+        /// @brief Constructs an empty interval (0, 0].
+        ///
+        /// This static method returns an interval where both the start and end
+        /// values are zero, representing an empty interval.
+        static constexpr BASALT_FORCE_INLINE OpenClosedInterval Empty() noexcept
+        {
+            return OpenClosedInterval(T{0}, T{0});
+        }
+
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
@@ -753,7 +791,7 @@ namespace bslt
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(
             const OpenClosedInterval<OtherType> other) const noexcept
         {
-            return other.start_exclusive_ >= start_exclusive_ && other.end_inclusive_ <= end_inclusive_;
+            return other.GetStart() >= start_exclusive_ && other.GetEnd() <= end_inclusive_;
         }
 
         /// @brief Checks if the interval fully contains another interval with tolerance.
@@ -770,8 +808,8 @@ namespace bslt
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(const OpenClosedInterval<OtherType> other,
                                                                           const T epsilon) const noexcept
         {
-            return other.start_exclusive_ >= (start_exclusive_ - epsilon) &&
-                other.end_inclusive_ <= (end_inclusive_ + epsilon);
+            return other.GetStart() >= (start_exclusive_ - epsilon) &&
+                other.GetEnd() <= (end_inclusive_ + epsilon);
         }
 
         /// @brief Checks if the current interval intersects with another interval.
@@ -1126,6 +1164,13 @@ namespace bslt
     public:
         using ValueType = T;
 
+        /// @brief Default constructor creating an interval [0, 0].
+        constexpr BASALT_FORCE_INLINE ClosedInterval() noexcept
+            : start_inclusive_(T{0}),
+              end_inclusive_(T{0})
+        {
+        }
+
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
@@ -1259,7 +1304,7 @@ namespace bslt
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(
             const ClosedInterval<OtherType> other) const noexcept
         {
-            return other.start_inclusive_ >= start_inclusive_ && other.end_inclusive_ <= end_inclusive_;
+            return other.GetStart() >= start_inclusive_ && other.GetEnd() <= end_inclusive_;
         }
 
         /// @brief Checks if the interval fully contains another interval with tolerance.
@@ -1276,8 +1321,8 @@ namespace bslt
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(const ClosedInterval<OtherType> other,
                                                                           const T epsilon) const noexcept
         {
-            return other.start_inclusive_ >= (start_inclusive_ - epsilon) &&
-                other.end_inclusive_ <= (end_inclusive_ + epsilon);
+            return other.GetStart() >= (start_inclusive_ - epsilon) &&
+                other.GetEnd() <= (end_inclusive_ + epsilon);
         }
 
         /// @brief Checks if the current interval intersects with another interval.
@@ -1630,6 +1675,13 @@ namespace bslt
     public:
         using ValueType = T;
 
+        /// @brief Default constructor creating an interval (0, 0).
+        constexpr BASALT_FORCE_INLINE OpenInterval() noexcept
+            : start_exclusive_(T{0}),
+              end_exclusive_(T{0})
+        {
+        }
+
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
@@ -1762,7 +1814,7 @@ namespace bslt
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(
             const OpenInterval<OtherType> other) const noexcept
         {
-            return other.start_exclusive_ >= start_exclusive_ && other.end_exclusive_ <= end_exclusive_;
+            return other.GetStart() >= start_exclusive_ && other.GetEnd() <= end_exclusive_;
         }
 
         /// @brief Checks if the interval fully contains another interval with tolerance.
@@ -1779,8 +1831,8 @@ namespace bslt
         [[nodiscard]] constexpr BASALT_FORCE_INLINE bool ContainsInterval(const OpenInterval<OtherType> other,
                                                                           const T epsilon) const noexcept
         {
-            return other.start_exclusive_ >= (start_exclusive_ - epsilon) &&
-                other.end_exclusive_ <= (end_exclusive_ + epsilon);
+            return other.GetStart() >= (start_exclusive_ - epsilon) &&
+                other.GetEnd() <= (end_exclusive_ + epsilon);
         }
 
         /// @brief Checks if the current interval intersects with another interval.
