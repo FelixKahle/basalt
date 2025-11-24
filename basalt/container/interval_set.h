@@ -957,7 +957,15 @@ namespace bslt
             return it->Intersects(other, epsilon);
         }
 
-        friend BASALT_FORCE_INLINE bool operator==(const IntervalSet& lhs, const IntervalSet& rhs) = default;
+        friend BASALT_FORCE_INLINE bool operator==(const IntervalSet& lhs, const IntervalSet& rhs)
+        {
+            return lhs.intervals_ == rhs.intervals_;
+        }
+
+        friend BASALT_FORCE_INLINE bool operator!=(const IntervalSet& lhs, const IntervalSet& rhs)
+        {
+            return !(lhs == rhs);
+        }
 
     private:
         using mutable_iterator = container_type::iterator;
@@ -1845,6 +1853,11 @@ namespace bslt
         friend BASALT_FORCE_INLINE bool operator==(const IntervalSet& lhs, const IntervalSet& rhs)
         {
             return lhs.intervals_ == rhs.intervals_;
+        }
+
+        friend BASALT_FORCE_INLINE bool operator!=(const IntervalSet& lhs, const IntervalSet& rhs)
+        {
+            return !(lhs == rhs);
         }
 
     private:

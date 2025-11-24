@@ -139,16 +139,16 @@ namespace bslt
 
         template <typename H>
             requires AbslHasher<H>
-        friend constexpr BASALT_FORCE_INLINE H AbslHashValue(H h, const TypedIndex interval) noexcept
+        friend constexpr BASALT_FORCE_INLINE H AbslHashValue(H h, const TypedIndex index) noexcept
         {
-            return AbslHashValue(std::move(h), interval.index_);
+            return H::combine(std::move(h), index.index_);
         }
 
         template <typename Sink>
             requires AbslStringifySink<Sink>
-        friend BASALT_FORCE_INLINE void AbslStringify(Sink& sink, const TypedIndex interval) noexcept
+        friend BASALT_FORCE_INLINE void AbslStringify(Sink& sink, const TypedIndex index) noexcept
         {
-            absl::Format(&sink, "%v", interval.Index());
+            absl::Format(&sink, "%v", index.Index());
         }
 
     private:
