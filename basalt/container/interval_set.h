@@ -288,7 +288,7 @@ namespace bslt
                 return;
             }
 
-            auto it = lower_bound(new_interval.GetStart());
+            auto it = FirstEndingAfter(new_interval.GetStart());
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -327,7 +327,7 @@ namespace bslt
                 return;
             }
 
-            auto it = lower_bound(sub_with_floor(new_interval.GetStart(), epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(new_interval.GetStart(), epsilon));
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -370,7 +370,7 @@ namespace bslt
                 return;
             }
 
-            auto it = lower_bound(interval_to_remove.GetStart());
+            auto it = FirstEndingAfter(interval_to_remove.GetStart());
             if (it == intervals_.end() || !interval_to_remove.Intersects(*it))
             {
                 return;
@@ -457,7 +457,7 @@ namespace bslt
                 return;
             }
 
-            auto it = lower_bound(sub_with_floor(interval_to_remove.GetStart(), epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(interval_to_remove.GetStart(), epsilon));
             if (it == intervals_.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
                 return;
@@ -725,7 +725,7 @@ namespace bslt
                 return;
             }
 
-            auto it_first = lower_bound(boundary.GetStart());
+            auto it_first = FirstEndingAfter(boundary.GetStart());
 
             constexpr auto comp_start = [](const IntervalType& i, ValueType v)
             {
@@ -845,12 +845,12 @@ namespace bslt
         /// @return \c true if the value is contained, \c false otherwise.
         [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v) const noexcept
         {
-            auto candidate = find_candidate_for_value(v);
-            if (candidate == intervals_.end())
+            auto it = FirstEndingAfter(v);
+            if (it == intervals_.end())
             {
                 return false;
             }
-            return v < candidate->GetEnd();
+            return it->Contains(v);
         }
 
         /// @brief Checks if a specific value is contained in the set with epsilon tolerance.
@@ -860,7 +860,7 @@ namespace bslt
         /// @return \c true if the value is contained within epsilon, \c false otherwise.
         [[nodiscard]] bool Contains(ValueType v, const ValueType epsilon) const noexcept
         {
-            auto candidate = find_candidate_for_value(v);
+            auto candidate = FirstEndingAfter(v);
             if (candidate != intervals_.end())
             {
                 if (candidate->Contains(v, epsilon))
@@ -868,7 +868,7 @@ namespace bslt
                     return true;
                 }
             }
-            auto it_check = lower_bound(sub_with_floor(v, epsilon));
+            auto it_check = FirstEndingAfter(SubWithFloor(v, epsilon));
             if (it_check != intervals_.end() && it_check->Contains(v, epsilon))
             {
                 return true;
@@ -887,7 +887,7 @@ namespace bslt
             {
                 return true;
             }
-            auto candidate = find_candidate_for_value(other.GetStart());
+            auto candidate = FirstEndingAfter(other.GetStart());
             if (candidate == intervals_.end())
             {
                 return false;
@@ -907,7 +907,7 @@ namespace bslt
             {
                 return true;
             }
-            auto it = lower_bound(sub_with_floor(other.GetStart(), epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(other.GetStart(), epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -926,7 +926,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = lower_bound(other.GetStart());
+            auto it = FirstEndingAfter(other.GetStart());
             if (it == intervals_.end())
             {
                 return false;
@@ -948,7 +948,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = lower_bound(sub_with_floor(other.GetStart(), epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(other.GetStart(), epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -971,7 +971,7 @@ namespace bslt
         ///
         /// @param v The value to search for.
         /// @return A const_iterator to the first candidate, or `end()`.
-        BASALT_FORCE_INLINE const_iterator lower_bound(ValueType v) const noexcept
+        BASALT_FORCE_INLINE const_iterator FirstEndingAfter(ValueType v) const noexcept
         {
             constexpr auto comp = [](const IntervalType& i, ValueType value)
             {
@@ -980,7 +980,7 @@ namespace bslt
             return std::lower_bound(intervals_.cbegin(), intervals_.cend(), v, comp);
         }
 
-        BASALT_FORCE_INLINE iterator lower_bound(ValueType v) noexcept
+        BASALT_FORCE_INLINE iterator FirstEndingAfter(ValueType v) noexcept
         {
             constexpr auto comp = [](const IntervalType& i, ValueType value)
             {
@@ -996,7 +996,7 @@ namespace bslt
         /// @param rhs The right-hand side value.
         ///
         /// @return The result of lhs - rhs, floored at zero for unsigned types.
-        static constexpr BASALT_FORCE_INLINE ValueType sub_with_floor(const ValueType lhs, const ValueType rhs) noexcept
+        static constexpr BASALT_FORCE_INLINE ValueType SubWithFloor(const ValueType lhs, const ValueType rhs) noexcept
         {
             if constexpr (std::is_unsigned_v<ValueType>)
             {
@@ -1007,26 +1007,6 @@ namespace bslt
                 // Fast path for signed types.
                 return lhs - rhs;
             }
-        }
-
-        /// @brief Finds the interval that *could* contain `v`.
-        ///
-        /// Returns the interval strictly containing `v` or `end()` if none.
-        ///
-        /// @param v The value to search for.
-        /// @return A const_iterator to the interval containing `v`.
-        BASALT_FORCE_INLINE const_iterator find_candidate_for_value(ValueType v) const noexcept
-        {
-            constexpr auto comp = [](ValueType v, const IntervalType& i)
-            {
-                return v < i.GetStart();
-            };
-            auto it = std::upper_bound(intervals_.begin(), intervals_.end(), v, comp);
-            if (it == intervals_.begin())
-            {
-                return intervals_.end();
-            }
-            return std::prev(it);
         }
 
         container_type intervals_;
@@ -1265,7 +1245,7 @@ namespace bslt
                 return;
             }
 
-            auto it = lower_bound(new_interval.GetStart());
+            auto it = FirstEndingAfter(new_interval.GetStart());
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -1297,7 +1277,7 @@ namespace bslt
             }
 
             // Search for start - epsilon
-            auto it = lower_bound(sub_with_floor(new_interval.GetStart(), epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(new_interval.GetStart(), epsilon));
             IntervalType merged_interval = new_interval;
             auto erase_start = it;
 
@@ -1398,7 +1378,7 @@ namespace bslt
                 return;
             }
 
-            auto it = lower_bound(interval_to_remove.GetStart());
+            auto it = FirstEndingAfter(interval_to_remove.GetStart());
 
             if (it == intervals_.end() || !interval_to_remove.Intersects(*it))
             {
@@ -1456,7 +1436,7 @@ namespace bslt
                 return;
             }
 
-            auto it = lower_bound(sub_with_floor(interval_to_remove.GetStart(), epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(interval_to_remove.GetStart(), epsilon));
 
             if (it == intervals_.end() || !interval_to_remove.Intersects(*it, epsilon))
             {
@@ -1637,7 +1617,7 @@ namespace bslt
                 return;
             }
 
-            auto it_keep = lower_bound(boundary.GetStart());
+            auto it_keep = FirstEndingAfter(boundary.GetStart());
             intervals_.erase(intervals_.begin(), it_keep);
 
             auto it_erase = intervals_.begin();
@@ -1741,16 +1721,12 @@ namespace bslt
         /// @return \c true if the value is contained, \c false otherwise.
         [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v) const noexcept
         {
-            // For disjoint intervals stored in a BTree, finding the candidate is tricky with
-            // the strict comparator. We use lower_bound to find the first interval
-            // that ends *after* v.
-            auto it = lower_bound(v);
+            auto it = FirstEndingAfter(v);
             if (it == intervals_.end())
             {
                 return false;
             }
-            // If the found interval starts at or before v, it contains v.
-            return it->GetStart() <= v;
+            return it->GetStart() <= v && v < it->GetEnd();
         }
 
         /// @brief Checks if a value is contained using epsilon tolerance.
@@ -1760,7 +1736,7 @@ namespace bslt
         /// @return \c true if the value is contained within epsilon, \c false otherwise.
         [[nodiscard]] BASALT_FORCE_INLINE bool Contains(ValueType v, const ValueType epsilon) const noexcept
         {
-            auto it = lower_bound(sub_with_floor(v, epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(v, epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -1778,7 +1754,7 @@ namespace bslt
             {
                 return true;
             }
-            auto it = lower_bound(other.GetStart());
+            auto it = FirstEndingAfter(other.GetStart());
             if (it == intervals_.end())
             {
                 return false;
@@ -1798,7 +1774,7 @@ namespace bslt
             {
                 return true;
             }
-            auto it = lower_bound(sub_with_floor(other.GetStart(), epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(other.GetStart(), epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -1817,7 +1793,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = lower_bound(other.GetStart());
+            auto it = FirstEndingAfter(other.GetStart());
             if (it == intervals_.end())
             {
                 return false;
@@ -1839,7 +1815,7 @@ namespace bslt
                 return false;
             }
 
-            auto it = lower_bound(sub_with_floor(other.GetStart(), epsilon));
+            auto it = FirstEndingAfter(SubWithFloor(other.GetStart(), epsilon));
             if (it == intervals_.end())
             {
                 return false;
@@ -1862,7 +1838,7 @@ namespace bslt
         ///
         /// @param v The value to search for.
         /// @return A const iterator to the first candidate, or `end()`.
-        BASALT_FORCE_INLINE const_iterator lower_bound(const ValueType v) const noexcept
+        BASALT_FORCE_INLINE const_iterator FirstEndingAfter(const ValueType v) const noexcept
         {
             return intervals_.lower_bound(IntervalType(v, v));
         }
@@ -1871,7 +1847,7 @@ namespace bslt
         ///
         /// @param v The value to search for.
         /// @return A const iterator to the first candidate, or `end()`.
-        BASALT_FORCE_INLINE iterator lower_bound(const ValueType v) noexcept
+        BASALT_FORCE_INLINE iterator FirstEndingAfter(const ValueType v) noexcept
         {
             return intervals_.lower_bound(IntervalType(v, v));
         }
@@ -1883,7 +1859,7 @@ namespace bslt
         /// @param rhs The right-hand side value.
         ///
         /// @return The result of lhs - rhs, floored at zero for unsigned types.
-        static constexpr BASALT_FORCE_INLINE ValueType sub_with_floor(const ValueType lhs, const ValueType rhs) noexcept
+        static constexpr BASALT_FORCE_INLINE ValueType SubWithFloor(const ValueType lhs, const ValueType rhs) noexcept
         {
             if constexpr (std::is_unsigned_v<ValueType>)
             {
