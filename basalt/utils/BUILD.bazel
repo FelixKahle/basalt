@@ -27,6 +27,7 @@ cc_library(
     hdrs = [
         "typed_index.h",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "//basalt/base:config",
         "//basalt/type_traits",
