@@ -51,7 +51,7 @@ namespace bslt
     /// @tparam T The size type (default std::size_t).
     /// @tparam Alloc The allocator for the underlying vector (default std::allocator).
     template <typename S = uint64_t, typename T = std::size_t, typename Alloc = std::allocator<S>>
-        requires std::is_unsigned_v<S>
+        requires std::is_unsigned_v<S> && Allocator<Alloc>
     class Bitset
     {
     public:

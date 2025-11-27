@@ -84,6 +84,24 @@ namespace bslt
     {
         { absl::StrFormat("%v", x) } -> std::same_as<std::string>;
     };
+
+    /// @brief A concept that checks if a type \p T satisfies the requirements of an allocator.
+    ///
+    /// This concept ensures that a type \p T can be used as an allocator,
+    /// specifically that it is copy constructible, equality comparable,
+    /// and provides the necessary methods for memory allocation and deallocation.
+    ///
+    /// @tparam T The type to check for allocator capabilities.
+    template <typename T>
+    concept Allocator =
+        std::copy_constructible<T> &&
+        std::equality_comparable<T> &&
+        requires(T a, std::size_t n)
+        {
+            typename T::value_type;
+            { a.allocate(n) } -> std::same_as<typename T::value_type*>;
+            { a.deallocate(a.allocate(n), n) } -> std::same_as<void>;
+        };
 }
 
 #endif //BASALT_TYPE_TRAITS_TYPE_TRAITS_H_
