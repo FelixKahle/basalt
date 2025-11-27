@@ -22,6 +22,9 @@
 #ifndef BASALT_UTILS_SATURATED_ARITHMETIC_H_
 #define BASALT_UTILS_SATURATED_ARITHMETIC_H_
 
+// This will be deprecated when C++26 is widely available, as it introduces
+// std::sub_sat etc. As the time of writing (2025), C++26 is not yet widely supported.
+
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -31,7 +34,7 @@
 #include "absl/log/check.h"
 #include "basalt/base/config.h"
 
-namespace bslt
+namespace bslt::saturated_arithmetic
 {
     /// @brief Performs addition ignoring overflow (wrap-around behavior).
     ///
@@ -46,7 +49,7 @@ namespace bslt
     /// @result The result of (x + y) wrapped around the limits of type T.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE T AddWrap(const T x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE T WrappingAdd(const T x, const T y) noexcept
     {
         using U = std::make_unsigned_t<T>;
         return static_cast<T>(static_cast<U>(x) + static_cast<U>(y));
@@ -54,7 +57,7 @@ namespace bslt
 
     /// @brief Performs subtraction ignoring overflow (wrap-around behavior).
     ///
-    /// Similar to AddWrap, this function casts operands to unsigned types to perform
+    /// Similar to WrappingAdd, this function casts operands to unsigned types to perform
     /// subtraction safely. This prevents Undefined Behavior associated with signed
     /// integer underflow/overflow in C++.
     ///
@@ -64,7 +67,7 @@ namespace bslt
     /// @result The result of (x - y) wrapped around the limits of type T.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE T SubWrap(const T x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE T WrappingSub(const T x, const T y) noexcept
     {
         using U = std::make_unsigned_t<T>;
         return static_cast<T>(static_cast<U>(x) - static_cast<U>(y));
@@ -82,7 +85,7 @@ namespace bslt
     /// @result The saturation limit (Min or Max) corresponding to the direction of x.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE T CapWithSignOf(const T x) noexcept
+    constexpr BASALT_FORCE_INLINE T SaturateToLimitBasedOnSign(const T x) noexcept
     {
         if constexpr (std::is_unsigned_v<T>)
         {
@@ -107,7 +110,7 @@ namespace bslt
     /// @result The value cast to Dst, saturated to [Dst::min(), Dst::max()] if out of bounds.
     template <typename Dst, typename Src>
         requires std::is_integral_v<Dst> && std::is_integral_v<Src>
-    constexpr BASALT_FORCE_INLINE Dst CapCast(const Src value) noexcept
+    constexpr BASALT_FORCE_INLINE Dst SaturatedCast(const Src value) noexcept
     {
         if (std::cmp_greater(value, std::numeric_limits<Dst>::max()))
         {
@@ -130,7 +133,7 @@ namespace bslt
     /// @result True if x is the minimum or maximum representable value, false otherwise.
     template <typename T>
         requires std::is_arithmetic_v<T>
-    constexpr BASALT_FORCE_INLINE bool AtMinOrMax(const T x) noexcept
+    constexpr BASALT_FORCE_INLINE bool IsAtNumericLimit(const T x) noexcept
     {
         if constexpr (std::is_floating_point_v<T>)
         {
@@ -155,7 +158,7 @@ namespace bslt
     /// @result True if (x + y) cannot be represented in type T, false otherwise.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE bool AddOverflows(const T x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE bool WillAdditionOverflow(const T x, const T y) noexcept
     {
 #if defined(__GNUC__) || defined(__clang__)
         T dummy;
@@ -165,13 +168,13 @@ namespace bslt
         if constexpr (std::is_unsigned_v<T>)
         {
             // Unsigned overflow: Result wraps around and becomes smaller than operand.
-            return AddWrap(x, y) < x;
+            return WrappingAdd(x, y) < x;
         }
         else
         {
             // Signed overflow: Operands have same sign, but result has different sign.
             // (Pos + Pos = Neg) or (Neg + Neg = Pos).
-            const T sum = AddWrap(x, y);
+            const T sum = WrappingAdd(x, y);
             // This bitwise check is branchless and extremely fast.
             return ((x ^ sum) & (y ^ sum)) < 0;
         }
@@ -190,7 +193,7 @@ namespace bslt
     /// @result True if (x - y) cannot be represented in type T, false otherwise.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE bool SubOverflows(const T x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE bool WillSubtractionOverflow(const T x, const T y) noexcept
     {
 #if defined(__GNUC__) || defined(__clang__)
         T dummy;
@@ -205,7 +208,7 @@ namespace bslt
         {
             // Signed overflow: x = diff + y.
             // Overflow if diff and y have same sign, but x has different sign.
-            const T diff = SubWrap(x, y);
+            const T diff = WrappingSub(x, y);
             return ((diff ^ x) & (y ^ x)) < 0;
         }
 #endif
@@ -222,7 +225,7 @@ namespace bslt
     /// @result The saturated negation of v.
     template <typename T>
         requires std::is_signed_v<T>
-    constexpr BASALT_FORCE_INLINE T CapOpp(const T v) noexcept
+    constexpr BASALT_FORCE_INLINE T SaturatedNegate(const T v) noexcept
     {
         return (v == std::numeric_limits<T>::min()) ? std::numeric_limits<T>::max() : -v;
     }
@@ -237,7 +240,7 @@ namespace bslt
     /// @result The saturated absolute value of v.
     template <typename T>
         requires std::is_signed_v<T>
-    constexpr BASALT_FORCE_INLINE T CapAbs(const T v) noexcept
+    constexpr BASALT_FORCE_INLINE T SaturatedAbs(const T v) noexcept
     {
         return (v == std::numeric_limits<T>::min()) ? std::numeric_limits<T>::max() : (v < 0 ? -v : v);
     }
@@ -253,17 +256,17 @@ namespace bslt
     /// @result The sum of x and y, clamped to the representable range of T.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE T CapAdd(const T x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE T SaturatedAdd(const T x, const T y) noexcept
     {
 #if defined(__GNUC__) || defined(__clang__)
         T res;
         if (__builtin_add_overflow(x, y, &res))
         {
-            return CapWithSignOf(x);
+            return SaturateToLimitBasedOnSign(x);
         }
         return res;
 #else
-        const T res = AddWrap(x, y);
+        const T res = WrappingAdd(x, y);
         bool overflow;
 
         if constexpr (std::is_unsigned_v<T>)
@@ -277,7 +280,7 @@ namespace bslt
 
         if (overflow)
         {
-            return CapWithSignOf(x);
+            return SaturateToLimitBasedOnSign(x);
         }
         return res;
 #endif
@@ -294,17 +297,17 @@ namespace bslt
     /// @result The difference of x and y, clamped to the representable range of T.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE T CapSub(const T x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE T SaturatedSub(const T x, const T y) noexcept
     {
 #if defined(__GNUC__) || defined(__clang__)
         T res;
         if (__builtin_sub_overflow(x, y, &res))
         {
-            return CapWithSignOf(x);
+            return SaturateToLimitBasedOnSign(x);
         }
         return res;
 #else
-        const T res = SubWrap(x, y);
+        const T res = WrappingSub(x, y);
         bool overflow;
 
         if constexpr (std::is_unsigned_v<T>)
@@ -319,7 +322,7 @@ namespace bslt
 
         if (overflow)
         {
-            return CapWithSignOf(x);
+            return SaturateToLimitBasedOnSign(x);
         }
         return res;
 #endif
@@ -338,7 +341,7 @@ namespace bslt
     /// @result The product of x and y, clamped to the representable range of T.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE T CapMul(const T x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE T SaturatedMul(const T x, const T y) noexcept
     {
 #if defined(__GNUC__) || defined(__clang__)
         T res;
@@ -350,7 +353,7 @@ namespace bslt
             }
             else
             {
-                return CapWithSignOf(static_cast<T>(x ^ y));
+                return SaturateToLimitBasedOnSign(static_cast<T>(x ^ y));
             }
         }
         return res;
@@ -378,7 +381,7 @@ namespace bslt
                 // We check this by shifting the low part arithmetic right by 63.
                 if (high != (low >> 63))
                 {
-                    return CapWithSignOf(static_cast<T>(x ^ y));
+                    return SaturateToLimitBasedOnSign(static_cast<T>(x ^ y));
                 }
                 return static_cast<T>(low);
             }
@@ -450,7 +453,7 @@ namespace bslt
     /// @result The quotient of x / y, clamped if the result overflows.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE T CapDiv(const T x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE T SaturatedDiv(const T x, const T y) noexcept
     {
         // Overflow in division happens only for Signed Min / -1.
         // This causes a SIGFPE (Floating Point Exception) on many CPUs (x86),
@@ -472,9 +475,9 @@ namespace bslt
     /// @param y The value to add.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE void CapAddTo(T& x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE void SaturatedAddAssign(T& x, const T y) noexcept
     {
-        x = CapAdd(x, y);
+        x = SaturatedAdd(x, y);
     }
 
     /// @brief Subtracts y from x in place, using saturated arithmetic.
@@ -484,9 +487,9 @@ namespace bslt
     /// @param y The value to subtract.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE void CapSubFrom(T& x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE void SaturatedSubtractAssign(T& x, const T y) noexcept
     {
-        x = CapSub(x, y);
+        x = SaturatedSub(x, y);
     }
 
     /// @brief Multiplies x by y in place, using saturated arithmetic.
@@ -496,9 +499,9 @@ namespace bslt
     /// @param y The factor to multiply by.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE void CapMulBy(T& x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE void SaturatedMultiplyAssign(T& x, const T y) noexcept
     {
-        x = CapMul(x, y);
+        x = SaturatedMul(x, y);
     }
 
     /// @brief Divides x by y in place, using saturated arithmetic.
@@ -508,9 +511,9 @@ namespace bslt
     /// @param y The divisor.
     template <typename T>
         requires std::is_integral_v<T>
-    constexpr BASALT_FORCE_INLINE void CapDivBy(T& x, const T y) noexcept
+    constexpr BASALT_FORCE_INLINE void SaturatedDivideAssign(T& x, const T y) noexcept
     {
-        x = CapDiv(x, y);
+        x = SaturatedDiv(x, y);
     }
 }
 
