@@ -72,3 +72,27 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "saturated_arithmetic",
+    hdrs = [
+        "saturated_arithmetic.h",
+    ],
+    deps = [
+        "//basalt/base:config",
+        "@abseil-cpp//absl/base:base",
+        "@abseil-cpp//absl/log:check",
+    ],
+)
+
+cc_test(
+    name = "saturated_arithmetic_test",
+    srcs = [
+        "saturated_arithmetic_test.cc",
+    ],
+    deps = [
+        ":saturated_arithmetic",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
