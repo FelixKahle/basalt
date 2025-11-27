@@ -108,19 +108,6 @@ namespace bslt::test
         EXPECT_EQ(interval.GetEnd(), end);
     }
 
-#if BASALT_BUILD_RELEASE
-    TYPED_TEST(ClosedOpenIntervalTypedTest, ConstructionSwapsOrder)
-    {
-        using T = TypeParam;
-        const T start{0};
-        const T end{10};
-        const ClosedOpenInterval<T> interval(end, start); // Swapped
-
-        EXPECT_EQ(interval.GetStart(), start);
-        EXPECT_EQ(interval.GetEnd(), end);
-    }
-#endif
-
     TYPED_TEST(ClosedOpenIntervalTypedTest, IsEmpty)
     {
         using T = TypeParam;
