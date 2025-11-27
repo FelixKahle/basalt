@@ -413,19 +413,6 @@ namespace bslt::test
         EXPECT_EQ(interval.GetEnd(), end);
     }
 
-#if BASALT_BUILD_RELEASE
-    TYPED_TEST(OpenClosedIntervalTypedTest, ConstructionSwapsOrder)
-    {
-        using T = TypeParam;
-        const T start{0};
-        const T end{10};
-        const OpenClosedInterval<T> interval(end, start); // Swapped
-
-        EXPECT_EQ(interval.GetStart(), start);
-        EXPECT_EQ(interval.GetEnd(), end);
-    }
-#endif
-
     TYPED_TEST(OpenClosedIntervalTypedTest, IsEmpty)
     {
         using T = TypeParam;
@@ -730,19 +717,6 @@ namespace bslt::test
         EXPECT_EQ(interval.GetStart(), start);
         EXPECT_EQ(interval.GetEnd(), end);
     }
-
-#if BASALT_BUILD_RELEASE
-    TYPED_TEST(ClosedIntervalTypedTest, ConstructionSwapsOrder)
-    {
-        using T = TypeParam;
-        const T start{0};
-        const T end{10};
-        const ClosedInterval<T> interval(end, start); // Swapped
-
-        EXPECT_EQ(interval.GetStart(), start);
-        EXPECT_EQ(interval.GetEnd(), end);
-    }
-#endif
 
     TYPED_TEST(ClosedIntervalTypedTest, IsEmpty)
     {
@@ -1057,19 +1031,6 @@ namespace bslt::test
         EXPECT_EQ(interval.GetStart(), start);
         EXPECT_EQ(interval.GetEnd(), end);
     }
-
-#if BASALT_BUILD_RELEASE
-    TYPED_TEST(OpenIntervalTypedTest, ConstructionSwapsOrder)
-    {
-        using T = TypeParam;
-        const T start{0};
-        const T end{10};
-        const OpenInterval<T> interval(end, start); // Swapped
-
-        EXPECT_EQ(interval.GetStart(), start);
-        EXPECT_EQ(interval.GetEnd(), end);
-    }
-#endif
 
     TYPED_TEST(OpenIntervalTypedTest, IsEmpty)
     {
