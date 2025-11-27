@@ -30,7 +30,6 @@ jobs:
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
 
-    # fail-fast: false ensures that if Windows fails, Linux/Mac jobs still finish
     strategy:
       fail-fast: false
       matrix:
@@ -39,36 +38,29 @@ jobs:
             os: ubuntu-latest
             cc: gcc
             cxx: g++
-            # Standard C++23 flag
-            std_flag: "--cxxopt='-std=c++23'"
+            std_flag: "--cxxopt='-std=c++23' --cxxopt='-fno-exceptions'"
 
           - name: "Ubuntu (Clang)"
             os: ubuntu-latest
             cc: clang
             cxx: clang++
-            std_flag: "--cxxopt='-std=c++23'"
+            std_flag: "--cxxopt='-std=c++23' --cxxopt='-fno-exceptions'"
 
           - name: "macOS (Apple Clang)"
             os: macos-latest
             cc: clang
             cxx: clang++
-            std_flag: "--cxxopt='-std=c++23'"
+            std_flag: "--cxxopt='-std=c++23' --cxxopt='-fno-exceptions'"
 
           - name: "Windows (MSVC)"
             os: windows-latest
-            # On Windows, Bazel auto-detects MSVC. We don't set CC/CXX.
             cc: ""
             cxx: ""
-            # MSVC specific flags:
-            # /std:c++20      -> Enable C++20 standard
-            # /Zc:__cplusplus -> Force correct __cplusplus macro value (Crucial for version checks)
-            std_flag: "--cxxopt='/std:c++20' --cxxopt='/Zc:__cplusplus'"
+            std_flag: "--cxxopt='/std:c++20' --cxxopt='/Zc:__cplusplus' --cxxopt='/EHs-c-' --cxxopt='/D_HAS_EXCEPTIONS=0'"
 
     env:
-      # Force Bazel to use the specific compiler for Linux/Mac
       CC: ${{ matrix.config.cc }}
       CXX: ${{ matrix.config.cxx }}
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -82,28 +74,19 @@ jobs:
           disk-cache: ${{ github.workflow }}
           repository-cache: true
 
-      # Install Clang explicitly on Linux if selected (ensure latest version)
       - name: Install Clang (Linux Only)
         if: matrix.config.name == 'Ubuntu (Clang)'
         run: |
           sudo apt-get update
           sudo apt-get install -y clang
 
-      # -----------------------------------------------------------------------
-      # Build & Test (Debug)
-      # -----------------------------------------------------------------------
       - name: Build (Debug)
         run: bazel build //... --compilation_mode=dbg ${{ matrix.config.std_flag }}
 
       - name: Test (Debug)
-        # --test_output=errors prints logs only if a test fails (cleaner logs)
         run: bazel test //... --compilation_mode=dbg ${{ matrix.config.std_flag }} --test_output=errors
-
-      # -----------------------------------------------------------------------
-      # Build & Test (Release)
-      # -----------------------------------------------------------------------
       - name: Build (Release)
         run: bazel build //... --compilation_mode=opt ${{ matrix.config.std_flag }}
-
+        
       - name: Test (Release)
         run: bazel test //... --compilation_mode=opt ${{ matrix.config.std_flag }} --test_output=errors
