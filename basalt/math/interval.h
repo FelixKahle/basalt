@@ -135,13 +135,12 @@ namespace bslt
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
-        /// It automatically sorts the values so that the start is the minimum and the end is the maximum.
         ///
         /// @param start_inclusive The inclusive start of the interval.
         /// @param end_exclusive The exclusive end of the interval.
         constexpr BASALT_FORCE_INLINE ClosedOpenInterval(const T start_inclusive, const T end_exclusive) noexcept
-            : start_inclusive_(std::min<T>(start_inclusive, end_exclusive)),
-              end_exclusive_(std::max<T>(start_inclusive, end_exclusive))
+            : start_inclusive_(start_inclusive),
+              end_exclusive_(end_exclusive)
         {
             DCHECK_LE(start_inclusive, end_exclusive);
         }
@@ -662,13 +661,12 @@ namespace bslt
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
-        /// It automatically sorts the values so that the start is the minimum and the end is the maximum.
         ///
         /// @param start_exclusive The exclusive start of the interval.
         /// @param end_inclusive The inclusive end of the interval.
         constexpr BASALT_FORCE_INLINE OpenClosedInterval(const T start_exclusive, const T end_inclusive) noexcept
-            : start_exclusive_(std::min<T>(start_exclusive, end_inclusive)),
-              end_inclusive_(std::max<T>(start_exclusive, end_inclusive))
+            : start_exclusive_(start_exclusive),
+              end_inclusive_(end_inclusive)
         {
             DCHECK_LE(start_exclusive, end_inclusive);
         }
@@ -1174,13 +1172,12 @@ namespace bslt
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
-        /// It automatically sorts the values so that the start is the minimum and the end is the maximum.
         ///
         /// @param start_inclusive The inclusive start of the interval.
         /// @param end_inclusive The inclusive end of the interval.
         constexpr BASALT_FORCE_INLINE ClosedInterval(const T start_inclusive, const T end_inclusive) noexcept
-            : start_inclusive_(std::min<T>(start_inclusive, end_inclusive)),
-              end_inclusive_(std::max<T>(start_inclusive, end_inclusive))
+            : start_inclusive_(start_inclusive),
+              end_inclusive_(end_inclusive)
         {
             DCHECK_LE(start_inclusive, end_inclusive);
         }
@@ -1685,13 +1682,12 @@ namespace bslt
         /// @brief Constructs an interval with the given start and end values.
         ///
         /// This constructor initializes the interval with the specified start and end values.
-        /// It automatically sorts the values so that the start is the minimum and the end is the maximum.
         ///
         /// @param start_exclusive The exclusive start of the interval.
         /// @param end_exclusive The exclusive end of the interval.
         constexpr BASALT_FORCE_INLINE OpenInterval(const T start_exclusive, const T end_exclusive) noexcept
-            : start_exclusive_(std::min<T>(start_exclusive, end_exclusive)),
-              end_exclusive_(std::max<T>(start_exclusive, end_exclusive))
+            : start_exclusive_(start_exclusive),
+              end_exclusive_(end_exclusive)
         {
             DCHECK_LE(start_exclusive, end_exclusive);
         }
@@ -2175,6 +2171,9 @@ namespace bslt
 
 namespace std
 {
+    // hash specializations for bslt interval types
+    // for use in std containers like std::unordered_map/set
+
     template <typename T>
     struct hash<bslt::ClosedOpenInterval<T>>
     {

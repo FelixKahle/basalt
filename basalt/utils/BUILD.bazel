@@ -78,6 +78,7 @@ cc_library(
     hdrs = [
         "saturated_arithmetic.h",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "//basalt/base:config",
         "@abseil-cpp//absl/base:base",
