@@ -28,3 +28,14 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "system_info",
+    srcs = [
+        "system_info.cc",
+    ],
+    hdrs = [
+        "system_info.h",
+    ],
+    deps = [],
+)
